@@ -2,8 +2,15 @@
 
 > 桌面即时意图预测与动态快捷调度器 (Desktop Instant Intent Predictor & Dynamic Shortcut Dispatcher)
 
+[![GitHub Pages](https://img.shields.io/badge/Live_Demo-GitHub_Pages-brightgreen?style=flat-square&logo=github)](https://jjy0230.github.io/SmartKey-Jev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B%20%7C%20Web%20Simulator-lightgrey?style=flat-square)](https://jjy0230.github.io/SmartKey-Jev/)
+
 SmartKey-Jev 是一个常驻 Windows 桌面后台的高响应性效率中枢。
 当用户在屏幕上划选文字并双击快捷键（默认双击 `Alt`）时，系统在毫秒级时延内捕获前台应用与文本上下文，通过“两级分桶启发式规则 + 决策模型接口”快速收敛出 Top-3 候选宏动作，并在鼠标旁唤出极简半透明悬浮卡片，支持用户盲打数字键 `1 / 2 / 3` 立即执行。
+
+🌐 **在线体验**：无需安装环境，即可在浏览器中体验仿真交互卡片与规则收敛推演：[https://jjy0230.github.io/SmartKey-Jev/](https://jjy0230.github.io/SmartKey-Jev/)
+
 
 ---
 

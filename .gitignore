@@ -31,3 +31,5 @@ ENV/
 *.swo
 
 *.log
+data/*.jsonl
+

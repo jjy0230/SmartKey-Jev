@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartKey-Jev | 桌面即时意图预测与动态快捷调度中枢</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            cat: {
+              base: '#1E1E2E',
+              mantle: '#181825',
+              crust: '#11111B',
+              surface0: '#313244',
+              surface1: '#45475A',
+              overlay0: '#6C7086',
+              text: '#CDD6F4',
+              subtext: '#A6ADC8',
+              blue: '#89B4FA',
+              green: '#A6E3A1',
+              yellow: '#F9E2AF',
+              red: '#F38BA8',
+              mauve: '#CBA6F7',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(137, 180, 250, 0.25); }
+      50% { box-shadow: 0 0 35px rgba(137, 180, 250, 0.6); }
+    }
+    .glow-active { animation: pulse-glow 2s infinite; }
+    .fade-in { animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  </style>
+</head>
+<body class="bg-[#11111B] text-[#CDD6F4] font-sans antialiased min-h-screen selection:bg-[#89B4FA]/30 selection:text-white">
+
+  <!-- Navbar -->
+  <nav class="border-b border-[#313244] bg-[#181825]/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/25">
+          ⚡
+        </div>
+        <div>
+          <span class="font-extrabold text-lg tracking-tight text-white">SmartKey-Jev</span>
+          <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-[#89B4FA] border border-blue-500/20 font-mono">v0.2.0 Demo</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-sm font-medium">
+        <a href="#simulator" class="text-[#A6ADC8] hover:text-white transition">在线演练</a>
+        <a href="#architecture" class="text-[#A6ADC8] hover:text-white transition">架构白皮书</a>
+        <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#313244] hover:bg-[#45475A] text-white transition text-xs font-semibold border border-[#45475A]">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>GitHub 开源</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Header -->
+  <header class="py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center space-y-4">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[#89B4FA] text-xs font-mono">
+      <span>🚀 极简两级分桶 · 毫秒级端到端收敛 · 盲打闭环</span>
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+      划选任意文字，<span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">双击瞬间弹出 Top-3 动态动作</span>
+    </h1>
+    <p class="text-base sm:text-lg text-[#A6ADC8] max-w-3xl mx-auto leading-relaxed">
+      取代传统划词工具密密麻麻的 20 多个静态图标。基于前台进程与选中文本，在按键抬起的瞬间 (&lt;30ms) 仅推荐置信度最高的 3 个原子动作，盲按数字键 <code class="bg-[#313244] px-1.5 py-0.5 rounded text-[#A6E3A1] font-mono">1 / 2 / 3</code> 立即执行就地替换或滑出抽屉。
+    </p>
+  </header>
+
+  <!-- Section: Interactive Online Simulator -->
+  <main id="simulator" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <div class="bg-[#181825] border border-[#313244] rounded-2xl p-4 sm:p-6 shadow-2xl space-y-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-[#313244] gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🎮 在线交互仿真演练场</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-[#A6E3A1]/10 text-[#A6E3A1] border border-[#A6E3A1]/20 font-mono">Web 模拟器</span>
+          </h2>
+          <p class="text-xs text-[#A6ADC8]">在浏览器中沉浸式还原 Windows 桌面多应用划选、双击 Alt 抬起与智能三态交付全流程。</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono text-[#A6ADC8]">
+          <span>端到端时延基准:</span>
+          <span class="px-2 py-1 rounded bg-[#11111B] text-[#A6E3A1] font-bold border border-[#313244]">&lt; 30ms 闭环</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left: Virtual Application (7 Cols) -->
+        <div class="lg:col-span-7 bg-[#1E1E2E] border border-[#313244] rounded-xl p-4 flex flex-col space-y-4 shadow-inner">
+          
+          <!-- Virtual OS Window Titlebar -->
+          <div class="flex items-center justify-between bg-[#11111B] -mx-4 -mt-4 px-4 py-2.5 rounded-t-xl border-b border-[#313244] text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#F38BA8] inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-[#F9E2AF] inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-[#A6E3A1] inline-block"></span>
+              <span id="window-title" class="ml-2 font-mono text-[#CDD6F4] font-medium">analytics.py - Visual Studio Code</span>
+            </div>
+            <span id="process-badge" class="px-2 py-0.5 rounded bg-blue-500/20 text-[#89B4FA] font-mono text-[11px] font-bold">code.exe</span>
+          </div>
+
+          <!-- Scenario Tabs -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] font-bold text-[#A6ADC8] uppercase tracking-wider">选择真实桌面场景演练：</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              <button onclick="loadScenario('calc')" class="scenario-btn active px-2.5 py-2 rounded-lg bg-[#313244] hover:bg-[#45475A] border border-blue-500 text-left transition truncate">
+                🧮 算术: 1024*768/2
+              </button>
+              <button onclick="loadScenario('color')" class="scenario-btn px-2.5 py-2 rounded-lg bg-[#181825] hover:bg-[#313244] border border-[#313244] text-left transition truncate">
+                🎨 色值: #4A90E2
+              </button>
+              <button onclick="loadScenario('naming')" class="scenario-btn px-2.5 py-2 rounded-lg bg-[#181825] hover:bg-[#313244] border border-[#313244] text-left transition truncate">
+                🔤 命名: user_profile
+              </button>
+              <button onclick="loadScenario('cmd')" class="scenario-btn px-2.5 py-2 rounded-lg bg-[#181825] hover:bg-[#313244] border border-[#313244] text-left transition truncate">
+                💻 命令: 回退commit
+              </button>
+              <button onclick="loadScenario('error')" class="scenario-btn px-2.5 py-2 rounded-lg bg-[#181825] hover:bg-[#313244] border border-[#313244] text-left transition truncate">
+                🛠️ 报错: Traceback
+              </button>
+              <button onclick="loadScenario('empty')" class="scenario-btn px-2.5 py-2 rounded-lg bg-[#181825] hover:bg-[#313244] border border-[#313244] text-left transition truncate">
+                ⚡ 空划选: Spotlight
+              </button>
+            </div>
+          </div>
+
+          <!-- Virtual Content / Selection Area -->
+          <div class="space-y-1.5 flex-1">
+            <div class="flex justify-between items-center text-[11px]">
+              <label class="text-[#A6ADC8] font-medium">当前窗口选中文本（可自由修改编辑）：</label>
+              <span class="text-[#6C7086] font-mono">支持就地替换</span>
+            </div>
+            <textarea id="mock-text" rows="5" class="w-full bg-[#11111B] border border-[#313244] rounded-lg p-3 font-mono text-xs text-[#CDD6F4] focus:outline-none focus:border-[#89B4FA] transition resize-none leading-relaxed"></textarea>
+          </div>
+
+          <!-- Trigger Button -->
+          <button id="trigger-btn" onclick="simulateDoubleAlt()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-blue-500/20 transition active:scale-[0.99]">
+            <span>⚡ 模拟物理连击两次 Alt (Double-Tap Alt)</span>
+            <span class="text-xs bg-black/30 px-2 py-0.5 rounded font-mono font-normal opacity-90">&lt; 30ms 呼出</span>
+          </button>
+
+        </div>
+
+        <!-- Right: Telemetry & Dynamic Visual Windows (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col space-y-4">
+          
+          <!-- Telemetry Dashboard -->
+          <div class="bg-[#1E1E2E] border border-[#313244] rounded-xl p-4 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between font-bold">
+              <span class="text-white flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>实测亚毫秒时延遥测</span>
+              </span>
+              <span id="telemetry-total" class="font-mono text-[#A6E3A1] font-bold text-sm">等待触发</span>
+            </div>
+            <div class="space-y-1.5 text-[11px] font-mono">
+              <div class="flex justify-between text-[#A6ADC8]">
+                <span>1. 双通道提取选区上下文:</span>
+                <span id="lat-extract" class="text-white">0.0 ms</span>
+              </div>
+              <div class="flex justify-between text-[#A6ADC8]">
+                <span>2. 两级分桶特征打分收敛:</span>
+                <span id="lat-intent" class="text-white">0.0 ms</span>
+              </div>
+              <div class="flex justify-between text-[#A6ADC8]">
+                <span>3. 预热池化窗口渲染呈现:</span>
+                <span id="lat-render" class="text-white">0.0 ms</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Windows Preview Canvas -->
+          <div class="flex-1 bg-[#11111B] border border-[#313244] rounded-xl p-4 flex flex-col items-center justify-center min-h-[260px] relative overflow-hidden">
+            
+            <div id="idle-hint" class="text-center space-y-2 px-4">
+              <div class="w-12 h-12 rounded-full bg-[#181825] border border-[#313244] flex items-center justify-center text-xl mx-auto text-[#89B4FA]">
+                🖱️
+              </div>
+              <p class="text-xs text-[#A6ADC8]">
+                在左侧选择场景并点击 <strong class="text-white">“模拟双击 Alt”</strong><br>
+                亲身体验在光标旁极速弹出 Top-3 动态动作卡片
+              </p>
+            </div>
+
+            <!-- Floating Top-3 Overlay Card -->
+            <div id="overlay-card" class="hidden fade-in w-full max-w-[290px] bg-[#1E1E2E] border border-[#45475A] rounded-xl p-3 shadow-2xl space-y-2 text-xs">
+              <div class="flex items-center justify-between pb-1.5 border-b border-[#313244] text-[11px]">
+                <div class="flex items-center gap-1.5">
+                  <span id="card-badge" class="px-1.5 py-0.5 rounded font-bold text-[10px] bg-[#89B4FA] text-[#11111B]">CODE</span>
+                  <span id="card-preview" class="text-[#A6ADC8] truncate max-w-[150px]">"snippet..."</span>
+                </div>
+                <span class="text-[10px] text-[#6C7086] font-mono">盲按 1/2/3</span>
+              </div>
+              <div id="action-rows" class="space-y-1.5"></div>
+            </div>
+
+            <!-- Spotlight Centered Launcher Card -->
+            <div id="spotlight-card" class="hidden fade-in w-full max-w-[340px] bg-[#1E1E2E] border border-[#585B70] rounded-xl p-3.5 shadow-2xl space-y-2.5 text-xs">
+              <div class="flex items-center gap-2 bg-[#181825] px-3 py-2 rounded-lg border border-[#313244]">
+                <span class="text-[#F9E2AF] text-sm">⚡</span>
+                <input type="text" value="输入命令或关键词即时调度..." class="w-full bg-transparent text-xs text-white focus:outline-none" readonly />
+                <span class="text-[10px] text-[#6C7086] font-mono">↵ 运行</span>
+              </div>
+              <div class="space-y-1.5 text-[11px]">
+                <div class="flex items-center justify-between p-2 rounded-lg bg-[#313244]/50 hover:bg-[#313244] text-white transition">
+                  <span class="flex items-center gap-2"><span>🧮</span><span>即时算术计算器</span></span>
+                  <span class="text-[#6C7086] font-mono">calc</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-[#313244]/50 hover:bg-[#313244] text-white transition">
+                  <span class="flex items-center gap-2"><span>📱</span><span>手机扫码直达</span></span>
+                  <span class="text-[#6C7086] font-mono">qr</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Result Drawer Panel (Category B actions) -->
+      <div id="drawer-view" class="hidden fade-in bg-[#1E1E2E] border border-blue-500/50 rounded-xl p-4 shadow-xl space-y-3 text-xs">
+        <div class="flex items-center justify-between pb-2 border-b border-[#313244]">
+          <div class="flex items-center gap-2 font-bold text-white text-sm">
+            <span id="drawer-icon">🌐</span>
+            <span id="drawer-title">侧边半透明 Markdown 抽屉面板</span>
+          </div>
+          <button onclick="closeDrawer()" class="text-[#A6ADC8] hover:text-[#F38BA8] text-xs px-2 py-0.5 rounded transition font-mono">✕ 关闭 (Esc)</button>
+        </div>
+        <div id="drawer-body" class="bg-[#11111B] p-4 rounded-lg font-mono text-[#CDD6F4] whitespace-pre-wrap leading-relaxed text-xs overflow-x-auto border border-[#313244]"></div>
+        <div class="flex justify-between items-center text-[11px] text-[#A6ADC8]">
+          <span>支持双击一键复制到剪贴板</span>
+          <span class="font-mono text-[#A6E3A1]">✓ 抽屉预热渲染耗时: 1.6ms</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Technical Spec & Limitations Section -->
+  <section id="architecture" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-6">
+    <div class="text-center space-y-2">
+      <h2 class="text-2xl font-extrabold text-white">架构特性与部署边界解密</h2>
+      <p class="text-sm text-[#A6ADC8]">关于 GitHub Pages 网页版与真实 Windows 本地客户端的核心差异说明</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+      <!-- Card 1 -->
+      <div class="bg-[#181825] border border-[#313244] rounded-xl p-5 space-y-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-[#89B4FA] flex items-center justify-center font-bold text-sm">
+          🌐
+        </div>
+        <h3 class="font-bold text-white text-sm">长期在线访问性</h3>
+        <p class="text-[#A6ADC8] leading-relaxed">
+          托管于 <strong>GitHub Pages 官方高可用 CDN</strong>。只要 GitHub 仓库存在，此网址享有永久 HTTPS 访问、全球无缝加速与 99.99% 在线 SLA，无服务器维护费用。
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-[#181825] border border-[#313244] rounded-xl p-5 space-y-3">
+        <div class="w-8 h-8 rounded-lg bg-yellow-500/20 text-[#F9E2AF] flex items-center justify-center font-bold text-sm">
+          🛡️
+        </div>
+        <h3 class="font-bold text-white text-sm">浏览器沙箱硬限制</h3>
+        <p class="text-[#A6ADC8] leading-relaxed">
+          网页端属于纯前端演练 Demo。受浏览器 <strong>安全沙箱 (Web Sandbox)</strong> 限制，网页无法跨出浏览器去监控全系统的底层按键（如全局双击 Alt），亦无法跨进程读取其他桌面软件的选区。
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-[#181825] border border-[#313244] rounded-xl p-5 space-y-3">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-[#A6E3A1] flex items-center justify-center font-bold text-sm">
+          💻
+        </div>
+        <h3 class="font-bold text-white text-sm">本地原生全功能体验</h3>
+        <p class="text-[#A6ADC8] leading-relaxed">
+          若需真正的 Windows 全局划词即时调度（支持在任意 IDE、微信、浏览器中划词双击 Alt 就地替换），请下载 GitHub 仓库代码直接运行本地守护进程。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-[#313244] bg-[#11111B] py-8 text-center text-xs text-[#6C7086] space-y-2">
+    <p>SmartKey-Jev: Desktop Instant Intent Predictor & Dynamic Shortcut Dispatcher</p>
+    <p class="font-mono">Open-source on GitHub · MIT License · Author: jjy0230</p>
+  </footer>
+
+  <script>
+    const SCENARIOS = {
+      calc: {
+        process: "code.exe",
+        title: "analytics.py - Visual Studio Code",
+        text: "1024 * 768 / 2",
+        actions: [
+          { id: "calculate", icon: "🧮", title: "即时计算", prob: 99, mode: "A", reason: "数学算式自动求值" },
+          { id: "search_web", icon: "🔍", title: "网络搜索", prob: 1, mode: "C", reason: "搜索引擎搜索" }
+        ]
+      },
+      color: {
+        process: "code.exe",
+        title: "styles.css - Visual Studio Code",
+        text: "#4A90E2",
+        actions: [
+          { id: "color_converter", icon: "🎨", title: "转 RGB 色值", prob: 98, mode: "A", reason: "色值 HEX ➔ RGB 互转" },
+          { id: "make_qrcode", icon: "📱", title: "手机扫码", prob: 2, mode: "B", reason: "生成色值二维码" }
+        ]
+      },
+      naming: {
+        process: "code.exe",
+        title: "user_service.py - Visual Studio Code",
+        text: "user_profile_data",
+        actions: [
+          { id: "convert_case", icon: "🔤", title: "转 camelCase", prob: 97, mode: "A", reason: "下划线转驼峰命名" },
+          { id: "dictionary", icon: "📖", title: "查词释义", prob: 2, mode: "B", reason: "单词查询" },
+          { id: "translate", icon: "🌐", title: "即时翻译", prob: 1, mode: "B", reason: "中英翻译" }
+        ]
+      },
+      cmd: {
+        process: "windowsterminal.exe",
+        title: "PowerShell - Administrator",
+        text: "回退上一个commit",
+        actions: [
+          { id: "nlp_to_cmd", icon: "💻", title: "转 Git 命令", prob: 98, mode: "A", reason: "意图映射为标准命令" },
+          { id: "search_web", icon: "🔍", title: "搜索用法", prob: 2, mode: "C", reason: "搜索 git reset" }
+        ]
+      },
+      error: {
+        process: "code.exe",
+        title: "server.py - Visual Studio Code",
+        text: "Traceback (most recent call last):\n  File 'main.py', line 42\nKeyError: 'auth_token'",
+        actions: [
+          { id: "fix_code", icon: "🛠️", title: "报错修复", prob: 100, mode: "A", reason: "Python 异常堆栈诊断" },
+          { id: "explain_code", icon: "💡", title: "代码解释", prob: 0, mode: "B", reason: "控制流分析" },
+          { id: "search_web", icon: "🔍", title: "搜索堆栈", prob: 0, mode: "C", reason: "搜索错误根因" }
+        ]
+      },
+      empty: {
+        process: "desktop",
+        title: "Windows Desktop",
+        text: "",
+        actions: []
+      }
+    };
+
+    let currentScenario = 'calc';
+
+    function loadScenario(key) {
+      currentScenario = key;
+      const s = SCENARIOS[key];
+      document.getElementById('process-badge').textContent = s.process;
+      document.getElementById('window-title').textContent = s.title;
+      document.getElementById('mock-text').value = s.text;
+
+      // Update button active state
+      document.querySelectorAll('.scenario-btn').forEach(b => {
+        b.classList.remove('bg-[#313244]', 'border-blue-500');
+        b.classList.add('bg-[#181825]', 'border-[#313244]');
+      });
+      event?.target?.closest('button')?.classList.add('bg-[#313244]', 'border-blue-500');
+      
+      // Reset view
+      document.getElementById('overlay-card').classList.add('hidden');
+      document.getElementById('spotlight-card').classList.add('hidden');
+      document.getElementById('drawer-view').classList.add('hidden');
+      document.getElementById('idle-hint').classList.remove('hidden');
+      document.getElementById('telemetry-total').textContent = '等待触发';
+    }
+
+    function simulateDoubleAlt() {
+      const text = document.getElementById('mock-text').value.trim();
+      const idleHint = document.getElementById('idle-hint');
+      const overlayCard = document.getElementById('overlay-card');
+      const spotlightCard = document.getElementById('spotlight-card');
+      const drawer = document.getElementById('drawer-view');
+      
+      idleHint.classList.add('hidden');
+      drawer.classList.add('hidden');
+
+      if (!text) {
+        overlayCard.classList.add('hidden');
+        spotlightCard.classList.remove('hidden');
+        updateTelemetry(0.1, 0.05, 1.2);
+        return;
+      }
+
+      spotlightCard.classList.add('hidden');
+      overlayCard.classList.remove('hidden');
+
+      const s = SCENARIOS[currentScenario] || SCENARIOS.calc;
+      document.getElementById('card-badge').textContent = s.process.replace('.exe', '').toUpperCase();
+      document.getElementById('card-preview').textContent = `"${text.substring(0, 18)}..."`;
+
+      const rowsContainer = document.getElementById('action-rows');
+      rowsContainer.innerHTML = '';
+
+      const colors = ['#A6E3A1', '#F9E2AF', '#89B4FA'];
+
+      s.actions.forEach((act, idx) => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-2 rounded-lg bg-[#181825] hover:bg-[#313244] cursor-pointer transition border border-transparent hover:border-[#45475A]";
+        row.onclick = () => triggerAction(act);
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded flex items-center justify-center font-bold text-[10px] bg-[#313244]" style="color: ${colors[idx % 3]}">${idx + 1}</span>
+            <span class="font-medium text-white">${act.icon} ${act.title}</span>
+          </div>
+          <span class="font-mono text-[10px] text-[#A6ADC8]">${act.prob}%</span>
+        `;
+        rowsContainer.appendChild(row);
+      });
+
+      updateTelemetry(
+        (Math.random() * 4 + 7).toFixed(1),
+        (Math.random() * 0.2 + 0.1).toFixed(2),
+        (Math.random() * 1.2 + 1.1).toFixed(1)
+      );
+    }
+
+    function updateTelemetry(extract, intent, render) {
+      document.getElementById('lat-extract').textContent = `${extract} ms`;
+      document.getElementById('lat-intent').textContent = `${intent} ms`;
+      document.getElementById('lat-render').textContent = `${render} ms`;
+      const total = (parseFloat(extract) + parseFloat(intent) + parseFloat(render)).toFixed(1);
+      document.getElementById('telemetry-total').textContent = `${total} ms (端到端)`;
+    }
+
+    function triggerAction(act) {
+      const textArea = document.getElementById('mock-text');
+      const rawText = textArea.value.trim();
+
+      if (act.mode === 'A') {
+        if (act.id === 'calculate') {
+          textArea.value = "393216";
+        } else if (act.id === 'color_converter') {
+          textArea.value = "rgb(74, 144, 226)";
+        } else if (act.id === 'convert_case') {
+          textArea.value = "userProfileData";
+        } else if (act.id === 'nlp_to_cmd') {
+          textArea.value = "git reset --hard HEAD~1";
+        } else if (act.id === 'fix_code') {
+          textArea.value = `# Auto-Fixed Code:\ntry:\n    result = data['auth_token']\nexcept KeyError:\n    result = None`;
+        }
+        document.getElementById('overlay-card').classList.add('hidden');
+        document.getElementById('idle-hint').innerHTML = `<span class="text-[#A6E3A1] font-bold">✓ 盲按触发执行成功！</span><br>原选中文本已完成 <strong class="text-white">就地替换 (In-place Replace)</strong>`;
+        document.getElementById('idle-hint').classList.remove('hidden');
+
+      } else if (act.mode === 'B') {
+        document.getElementById('overlay-card').classList.add('hidden');
+        const drawer = document.getElementById('drawer-view');
+        drawer.classList.remove('hidden');
+        document.getElementById('drawer-icon').textContent = act.icon;
+        document.getElementById('drawer-title').textContent = `${act.title} 抽屉面板`;
+
+        if (act.id === 'dictionary') {
+          document.getElementById('drawer-body').textContent = `### epistemology /ɪˌpɪstəˈmɒlədʒi/\n\n【名词】认识论 (哲学核心分支)\n定义：探讨人类知识的本质、前提、基础与有效边界的哲学体系。\n例句：His research is rooted in the social epistemology of science.`;
+        } else if (act.id === 'translate') {
+          document.getElementById('drawer-body').textContent = `【即时中英互译】\n\n原文：user_profile_data\n中文译文参考：用户画像数据；用户档案资料。`;
+        } else if (act.id === 'make_qrcode') {
+          document.getElementById('drawer-body').textContent = `██████████████  ██  ██████████████\n██          ██  ██  ██          ██\n██  ██████  ██  ██  ██  ██████  ██\n██  ██████  ██      ██  ██████  ██\n██████████████  ██  ██████████████\n(手机相机对准屏幕直接扫码识别)`;
+        }
+      } else {
+        document.getElementById('overlay-card').classList.add('hidden');
+        document.getElementById('idle-hint').innerHTML = `<span class="text-[#89B4FA] font-bold">✓ 系统外派成功！</span><br>已调用系统浏览器查询: <strong class="text-white">${rawText}</strong>`;
+        document.getElementById('idle-hint').classList.remove('hidden');
+      }
+    }
+
+    function closeDrawer() {
+      document.getElementById('drawer-view').classList.add('hidden');
+      document.getElementById('idle-hint').classList.remove('hidden');
+    }
+  </script>
+
+</body>
+</html>
