@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smartkey-jev"
+version = "0.1.0"
+description = "Desktop Instant Intent Predictor & Dynamic Shortcut Dispatcher"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "jjy0230"}
+]
+dependencies = [
+    "pywin32>=306",
+    "uiautomation>=2.0.20",
+    "psutil>=5.9.0",
+    "requests>=2.28.0",
+]
+
+[project.scripts]
+smartkey-jev = "main:main"
