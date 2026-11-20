@@ -55,6 +55,24 @@ PRESET_MACROS: List[MacroAction] = [
         delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="3",
     ),
+    MacroAction(
+        id="make_qrcode",
+        title="手机扫码",
+        icon="📱",
+        category=MacroCategory.UTILITY,
+        description="将当前选中文本或链接生成二维码，手机秒扫接力",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
+        default_shortcut="1",
+    ),
+    MacroAction(
+        id="pin_scratchpad",
+        title="图钉便签",
+        icon="📌",
+        category=MacroCategory.PRODUCTIVITY,
+        description="将选中文本钉在桌面角落作为半透明悬浮备忘录",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
+        default_shortcut="2",
+    ),
 
     # ── A 类: 就地直接替换 ──────────────────────────────────────────
     MacroAction(
@@ -83,6 +101,24 @@ PRESET_MACROS: List[MacroAction] = [
         description="在 camelCase、snake_case、PascalCase 间快速切换",
         delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
         default_shortcut="2",
+    ),
+    MacroAction(
+        id="color_converter",
+        title="颜色转换",
+        icon="🎨",
+        category=MacroCategory.UTILITY,
+        description="解析 HEX/RGB/HSL 色值代码并提供互转与调色预览",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="2",
+    ),
+    MacroAction(
+        id="nlp_to_cmd",
+        title="意图转命令",
+        icon="💻",
+        category=MacroCategory.UTILITY,
+        description="将自然语言意图转换为可执行的 Shell 或 Git 命令",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="1",
     ),
     MacroAction(
         id="polish_text",

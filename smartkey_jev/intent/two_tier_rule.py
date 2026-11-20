@@ -66,22 +66,22 @@ PROCESS_MAPPING: Dict[str, str] = {
 # Tier-1 Candidate Bucketing (Filter 12 -> 6~8 macros based on process archetype)
 ARCHETYPE_PREFERRED_MACROS: Dict[str, List[str]] = {
     ProcessArchetype.IDE: [
-        "fix_code", "explain_code", "format_json", "convert_case", "calculate", "open_path", "regex_test", "search_web", "translate", "terminal_cmd"
+        "fix_code", "explain_code", "format_json", "convert_case", "color_converter", "calculate", "open_path", "regex_test", "nlp_to_cmd", "search_web", "translate", "terminal_cmd", "make_qrcode", "pin_scratchpad"
     ],
     ProcessArchetype.BROWSER: [
-        "translate", "summarize", "search_web", "open_url", "dictionary", "calculate", "open_path", "create_todo", "polish_text"
+        "translate", "summarize", "search_web", "open_url", "dictionary", "make_qrcode", "color_converter", "calculate", "open_path", "create_todo", "polish_text", "pin_scratchpad"
     ],
     ProcessArchetype.CHAT: [
-        "polish_text", "translate", "calculate", "create_todo", "summarize", "search_web", "dictionary"
+        "polish_text", "translate", "calculate", "create_todo", "make_qrcode", "summarize", "search_web", "dictionary", "pin_scratchpad"
     ],
     ProcessArchetype.OFFICE: [
-        "calculate", "polish_text", "summarize", "translate", "dictionary", "create_todo", "search_web"
+        "calculate", "polish_text", "summarize", "translate", "dictionary", "create_todo", "search_web", "make_qrcode", "pin_scratchpad"
     ],
     ProcessArchetype.TERMINAL: [
-        "terminal_cmd", "open_path", "calculate", "fix_code", "explain_code", "search_web", "translate", "format_json"
+        "terminal_cmd", "nlp_to_cmd", "open_path", "calculate", "fix_code", "explain_code", "search_web", "translate", "format_json", "pin_scratchpad"
     ],
     ProcessArchetype.GENERAL: [
-        "calculate", "open_path", "search_web", "translate", "summarize", "open_url", "dictionary", "create_todo", "polish_text"
+        "calculate", "open_path", "search_web", "translate", "make_qrcode", "summarize", "open_url", "dictionary", "create_todo", "polish_text", "color_converter", "pin_scratchpad"
     ],
 }
 
@@ -111,6 +111,8 @@ class TwoTierRulePredictor(BaseIntentPredictor):
     MATH_PATTERN = re.compile(r"^[\d\.\s\+\-\*\/\(\)\%\^\=]+$")
     PATH_PATTERN = re.compile(r"^([a-zA-Z]:[\\/]|/|~[\\/]|[a-zA-Z0-9_\-\.]+[\\/])[^\<\>\:\"\|\\?\*]+$")
     CASE_PATTERN = re.compile(r'^[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+$|^[a-z]+([A-Z][a-z0-9]+)+$')
+    COLOR_PATTERN = re.compile(r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$|^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+', re.I)
+    NLP_CMD_PATTERN = re.compile(r'(回退|撤销|commit|端口|\bport\b|杀进程|代码行数|\bdocker\b|\bnpm\b|\bgpu\b|显存)')
 
     def __init__(self):
         super().__init__()
@@ -150,6 +152,21 @@ class TwoTierRulePredictor(BaseIntentPredictor):
 
         base_logit = 1.0
         reason = "Context affinity"
+
+        # 0.01 Color Code pattern (e.g. "#4A90E2", "rgb(74, 144, 226)")
+        if self.COLOR_PATTERN.match(stripped) and length <= 35:
+            if macro_id == "color_converter":
+                return 18.0, "HEX / RGB color code pattern detected"
+            elif macro_id == "search_web":
+                return 3.0, "Color code search"
+            return 0.1, "Non-color action suppressed"
+
+        # 0.02 Natural Language Command intent
+        if self.NLP_CMD_PATTERN.search(stripped) and not any(c in stripped for c in "{};()=>") and length < 60:
+            if macro_id == "nlp_to_cmd":
+                return 16.0, "Natural language shell/git command intent"
+            elif macro_id == "terminal_cmd":
+                return 8.0, "Terminal execution candidate"
 
         # 0. Math Arithmetic Expression pattern (e.g. "1024 * 768", "(120 + 35) / 5")
         if self.MATH_PATTERN.match(stripped) and any(op in stripped for op in "+-*/%^") and any(c.isdigit() for c in stripped) and length < 50:

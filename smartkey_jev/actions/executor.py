@@ -126,6 +126,48 @@ class ActionExecutor:
                     replacement_text = "_".join(words)
             else:
                 replacement_text = token
+
+        elif action.id == "color_converter":
+            # HEX <-> RGB Converter
+            token = raw_text.strip()
+            hex_match = re.match(r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$', token)
+            rgb_match = re.match(r'^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)', token, re.I)
+            if hex_match:
+                h = hex_match.group(1)
+                if len(h) == 3:
+                    h = "".join(c * 2 for c in h)
+                r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+                replacement_text = f"rgb({r}, {g}, {b})"
+            elif rgb_match:
+                r, g, b = int(rgb_match.group(1)), int(rgb_match.group(2)), int(rgb_match.group(3))
+                replacement_text = f"#{r:02X}{g:02X}{b:02X}"
+            else:
+                replacement_text = token
+
+        elif action.id == "nlp_to_cmd":
+            token = raw_text.strip()
+            # Port match
+            port_match = re.search(r'(\d{2,5})', token)
+            port = port_match.group(1) if port_match else "8080"
+            if any(k in token for k in ["回退", "撤销", "undo", "reset"]) and any(k in token for k in ["commit", "提交"]):
+                if "软" in token or "保留" in token or "soft" in token:
+                    replacement_text = "git reset --soft HEAD~1"
+                else:
+                    replacement_text = "git reset --hard HEAD~1"
+            elif any(k in token for k in ["端口", "port"]) and any(k in token for k in ["查", "占用", "看"]):
+                replacement_text = f"netstat -ano | findstr :{port}"
+            elif any(k in token for k in ["代码行数", "行数", "loc"]):
+                replacement_text = "git ls-files | xargs wc -l"
+            elif any(k in token for k in ["npm", "node"]) and any(k in token for k in ["缓存", "cache"]):
+                replacement_text = "npm cache clean --force"
+            elif any(k in token for k in ["docker", "镜像", "容器"]) and any(k in token for k in ["清理", "prune"]):
+                replacement_text = "docker system prune -a"
+            elif any(k in token for k in ["gpu", "显卡", "显存"]):
+                replacement_text = "nvidia-smi -l 1"
+            else:
+                replacement_text = f"# Command for: {token}"
+
+        elif action.id == "polish_text":
             # Pangu spacing (insert spaces between CJK and alphanumeric)
             p1 = re.sub(r'([\u4e00-\u9fa5])([a-zA-Z0-9])', r'\1 \2', raw_text)
             p2 = re.sub(r'([a-zA-Z0-9])([\u4e00-\u9fa5])', r'\1 \2', p1)
@@ -244,6 +286,30 @@ class ActionExecutor:
                 f"- 优先级：中高优先级 (P1)\n"
                 f"- 状态：已录入 SmartKey 待办队列"
             )
+
+        elif action.id == "make_qrcode":
+            try:
+                import qrcode
+                qr = qrcode.QRCode(border=1)
+                qr.add_data(text)
+                qr.make(fit=True)
+                matrix = qr.get_matrix()
+                qr_lines = []
+                for row in matrix:
+                    qr_lines.append("".join("██" if cell else "  " for cell in row))
+                qr_ascii = "\n".join(qr_lines)
+                content = (
+                    f"### 📱 手机扫码接力 (手机相机直接对准识别)\n\n"
+                    f"```text\n{qr_ascii}\n```\n\n"
+                    f"**编码内容**：`{text[:80]}`"
+                )
+            except Exception as e:
+                content = f"### 二维码生成失败\n\n{e}"
+
+        elif action.id == "pin_scratchpad":
+            from ..ui.scratchpad import DEFAULT_SCRATCHPAD_MANAGER
+            DEFAULT_SCRATCHPAD_MANAGER.create_pin(text, title="桌面图钉便签")
+            content = f"### 📌 已将内容钉在桌面置顶便签\n\n- 便签内容：`{text[:80]}`\n- 双击便签正文可一键重新复制，点击 ✕ 关闭。"
 
         if self.drawer_callback:
             self.drawer_callback(title, action.icon, content)
