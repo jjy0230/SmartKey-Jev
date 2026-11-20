@@ -1,904 +1,1000 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartKey-Jev | 桌面即时意图预测与动态快捷调度中枢</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Google Fonts: Plus Jakarta Sans (Modern UI) + Caveat (Handwritten Sketched Accents) + JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Real QR Code Library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartKey-Jev — Desktop Instant Intent Predictor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Gaegu:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Real QR Code Library for Mobile Relay -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-            hand: ['"Caveat"', 'cursive'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            pastel: {
-              blue: '#E0F2FE',
-              blueBorder: '#BAE6FD',
-              blueTag: '#0284C7',
-              peach: '#FFEDD5',
-              peachBorder: '#FED7AA',
-              peachTag: '#EA580C',
-              mint: '#DCFCE7',
-              mintBorder: '#BBF7D0',
-              mintTag: '#16A34A',
-              lilac: '#F3E8FF',
-              lilacBorder: '#E9D5FF',
-              lilacTag: '#9333EA',
-            }
-          },
-          boxShadow: {
-            'soft-card': '0 20px 40px -15px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(0, 0, 0, 0.03)',
-            'float': '0 25px 50px -12px rgba(15, 23, 42, 0.08)',
-            'keycap-light': '0 2px 0 0 #D1D5DB, inset 0 1px 0 0 #FFFFFF',
-          }
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #111111;
+            --mint: #d7f1e1;
+            --peach: #ffe8d6;
+            --sky: #e0f2fe;
+            --lilac: #f3e8ff;
+            --shadow: rgba(0, 0, 0, 0.05) 0px 20px 50px;
         }
-      }
-    }
-  </script>
 
-  <style>
-    /* Smooth Scrolling & Selection */
-    html { scroll-behavior: smooth; }
-    ::selection { background-color: #E0E7FF; color: #1E1B4B; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    /* Custom subtle scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+            cursor: default;
+            user-select: none;
+        }
 
-    /* Keycap 3D Tactile Styling (Light Mode) */
-    .kbd-btn-light {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-family: '"JetBrains Mono"', monospace;
-      font-weight: 700;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
-      color: #1E293B;
-      border: 1px solid #CBD5E1;
-      border-bottom: 2px solid #94A3B8;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-      user-select: none;
-      transition: all 0.08s ease;
-    }
-    .kbd-btn-light:active, .kbd-btn-light.pressed {
-      transform: translateY(1.5px);
-      border-bottom-width: 1px;
-      box-shadow: 0 0 1px rgba(0,0,0,0.1);
-      filter: brightness(0.95);
-    }
+        .canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    /* Spring Animation */
-    @keyframes springIn {
-      0% { opacity: 0; transform: translateY(-10px) scale(0.95); }
-      70% { opacity: 1; transform: translateY(2px) scale(1.01); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .spring-pop {
-      animation: springIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
+        /* Top Navigation */
+        nav {
+            position: fixed;
+            top: 40px;
+            left: 40px;
+            right: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
 
-    /* Flash Highlight for In-Place Replacement */
-    @keyframes flashGreen {
-      0% { background-color: rgba(74, 222, 128, 0.45); }
-      100% { background-color: transparent; }
-    }
-    .flash-highlight {
-      animation: flashGreen 1s ease-out;
-    }
+        .logo {
+            font-family: 'Gaegu', cursive;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    /* Floating Canvas Card Hover Dynamics */
-    .kinetic-card {
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-    }
-    .kinetic-card:hover {
-      transform: translateY(-4px) scale(1.02) !important;
-      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.1);
-    }
-  </style>
+        .logo-tag {
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: #f1f5f9;
+            color: #64748b;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #888;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: inherit;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--fg);
+        }
+
+        .nav-links a.active {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        /* Scenario Preset Pills inside Nav */
+        .scenario-pills {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pill-btn {
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #f5f5f5;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            outline: none;
+        }
+
+        .pill-btn:hover {
+            background: #ebebeb;
+            color: var(--fg);
+        }
+
+        .pill-btn.active {
+            background: var(--fg);
+            color: white;
+        }
+
+        /* Center Hero */
+        .hero {
+            text-align: center;
+            max-width: 540px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero h1 {
+            font-family: 'Gaegu', cursive;
+            font-size: 68px;
+            line-height: 0.9;
+            margin-bottom: 24px;
+            color: var(--fg);
+        }
+
+        .search-trigger-container {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-trigger {
+            display: inline-flex;
+            align-items: center;
+            padding: 14px 28px;
+            background: #f5f5f5;
+            border-radius: 100px;
+            gap: 12px;
+            color: var(--fg);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: text;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            border: 1px solid transparent;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            min-width: 320px;
+            justify-content: space-between;
+        }
+
+        .search-trigger:hover, .search-trigger.active {
+            transform: scale(1.02);
+            background: #ffffff;
+            border-color: #e5e5e5;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+        }
+
+        .search-input {
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            color: var(--fg);
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            width: 100%;
+        }
+
+        .key-hint {
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: #888;
+            background: #ffffff;
+            padding: 3px 8px;
+            border-radius: 100px;
+            border: 1px solid #e5e5e5;
+            white-space: nowrap;
+        }
+
+        .hero-subhint {
+            font-size: 12px;
+            color: #aaa;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Bento Cards */
+        .card {
+            position: absolute;
+            background: white;
+            padding: 24px;
+            border-radius: 32px;
+            box-shadow: var(--shadow);
+            width: 240px;
+            transition: transform 0.1s ease-out;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .card:active { cursor: grabbing; }
+
+        .card-label {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .stat {
+            margin-top: 14px;
+            font-size: 26px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #10b981;
+            background: #ecfdf5;
+            padding: 3px 8px;
+            border-radius: 100px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Card Positioning (Kinetic Layout) */
+        #card-1 { top: 15%; left: 10%; background: var(--sky); transform: rotate(-3deg); }
+        #card-2 { top: 20%; right: 12%; background: var(--peach); transform: rotate(2deg); }
+        #card-3 { bottom: 15%; left: 15%; background: var(--mint); transform: rotate(4deg); }
+        #card-4 { bottom: 20%; right: 10%; background: var(--lilac); transform: rotate(-2deg); }
+
+        .growth-curve {
+            width: 100%;
+            height: 40px;
+            margin-top: 12px;
+        }
+
+        /* Floating Dots */
+        .dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Handwritten Annotations */
+        .annotation {
+            position: absolute;
+            font-family: 'Gaegu', cursive;
+            font-size: 20px;
+            color: #aaa;
+            pointer-events: none;
+            letter-spacing: -0.5px;
+        }
+
+        /* SmartKey Top-3 Pop-up Overlay Card */
+        .smart-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 320px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 28px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .smart-popup.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 12px;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .app-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: var(--sky);
+            color: #0284c7;
+        }
+
+        .popup-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 16px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+
+        .action-item:hover {
+            background: #f1f5f9;
+            transform: translateY(-1px);
+            border-color: #e2e8f0;
+        }
+
+        .action-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .keycap {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-bottom: 2px solid #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--fg);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .action-info {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .action-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .action-subtitle {
+            font-size: 10px;
+            color: #888;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .action-prob {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .popup-footer {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #aaa;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Slide-out Drawer Panel (Category B actions like QR code) */
+        .drawer {
+            position: fixed;
+            top: 40px;
+            bottom: 40px;
+            right: 40px;
+            width: 340px;
+            background: white;
+            border-radius: 32px;
+            box-shadow: var(--shadow);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 600;
+            transform: translateX(400px);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer.active {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .drawer-title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            background: #f1f5f9;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #e2e8f0;
+            color: var(--fg);
+        }
+
+        .drawer-body {
+            flex: 1;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 16px;
+        }
+
+        .qr-box {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .drawer-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 16px;
+            width: 100%;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            word-break: break-all;
+        }
+
+        /* Footer CTA Button */
+        .footer-cta {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .btn-primary {
+            background: var(--fg);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 100px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .arrow-circle {
+            width: 24px;
+            height: 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Replacement highlight */
+        @keyframes flashSuccess {
+            0% { background: #bbf7d0; }
+            100% { background: #f5f5f5; }
+        }
+        .flash {
+            animation: flashSuccess 1s ease-out;
+        }
+    </style>
 </head>
-<body class="bg-[#FAFAFA] text-zinc-900 font-sans antialiased min-h-screen relative overflow-x-hidden">
+<body>
 
-  <!-- Top Navigation Bar -->
-  <nav class="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between sticky top-0 z-50 bg-[#FAFAFA]/90 backdrop-blur-md">
-    <!-- Brand -->
-    <a href="#" class="flex items-center gap-2 group">
-      <span class="font-extrabold text-2xl tracking-tight text-zinc-900 group-hover:opacity-80 transition">SmartKey.</span>
-      <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">v0.2.0</span>
-    </a>
-
-    <!-- Nav Items -->
-    <div class="flex items-center gap-8 text-sm font-medium text-zinc-500">
-      <a href="#playground" class="hover:text-zinc-900 transition">交互模拟</a>
-      <a href="#architecture" class="hover:text-zinc-900 transition">两级分桶</a>
-      <a href="#matrix" class="hover:text-zinc-900 transition hidden sm:inline-block">特性对比</a>
-      <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank" class="flex items-center gap-2 text-zinc-900 font-semibold hover:opacity-75 transition">
-        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        <span>GitHub 开源</span>
-      </a>
-    </div>
-  </nav>
-
-  <!-- Hero & Floating Bento Canvas Section (Kinetic Style) -->
-  <section class="max-w-7xl mx-auto px-6 lg:px-12 pt-8 pb-16 relative">
-    
-    <!-- Central Stage Container -->
-    <div class="relative min-h-[580px] lg:min-h-[640px] flex flex-col items-center justify-center text-center">
-      
-      <!-- Card 1: Top-Left (Strategy / Sky Blue pastel) -->
-      <div class="kinetic-card hidden md:block absolute top-4 left-4 lg:left-12 w-[270px] bg-pastel-blue border border-pastel-blueBorder rounded-[28px] p-6 text-left shadow-soft-card transform -rotate-3 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-blueTag mb-4 font-mono shadow-sm">
-          TWO-TIER ENGINE
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          两级分桶意图预测
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed mb-4">
-          前台进程粗筛 + 上下文精算，自洽收敛出最精准的 Top-3 候选。
-        </p>
-        <!-- Blue Sparkline Wave -->
-        <svg class="w-full h-8 text-sky-500 overflow-visible" fill="none" viewBox="0 0 200 30" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M 0,25 C 50,22 100,5 200,2" />
-        </svg>
-      </div>
-
-      <!-- Handwritten note near Card 1 -->
-      <div class="hidden lg:block absolute top-28 left-[310px] font-hand text-zinc-400 text-lg rotate-3 select-none pointer-events-none">
-        built for microsecond speed ~
-      </div>
-
-      <!-- Card 2: Top-Right (Live Stats / Peach pastel) -->
-      <div class="kinetic-card hidden md:block absolute top-8 right-4 lg:right-12 w-[260px] bg-pastel-peach border border-pastel-peachBorder rounded-[28px] p-6 text-left shadow-soft-card transform rotate-3 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-peachTag mb-4 font-mono shadow-sm">
-          LIVE STATS
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-2">
-          端到端响应
-        </h3>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span class="text-3xl font-black text-zinc-900 tracking-tight font-mono">&lt; 1.2ms</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-mono">预热池化</span>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo" onclick="resetToInitial()">
+            <span>SmartKey.</span>
+            <span class="logo-tag">Jev v0.2.0</span>
         </div>
-        <p class="text-xs text-zinc-600 leading-relaxed">
-          双击物理 Alt 释放瞬发，完全无感知无白屏。
-        </p>
-      </div>
-
-      <!-- Card 3: Bottom-Left (Platform / Mint Green pastel) -->
-      <div class="kinetic-card hidden md:block absolute bottom-6 left-6 lg:left-16 w-[270px] bg-pastel-mint border border-pastel-mintBorder rounded-[28px] p-6 text-left shadow-soft-card transform rotate-2 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-mintTag mb-4 font-mono shadow-sm">
-          CLIPBOARD GUARD
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          剪贴板历史零污染
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed mb-4">
-          自动注入阻隔标志，绝不污染 Win+V 剪贴板历史。
-        </p>
-        <div class="flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs font-bold shadow-sm text-zinc-800">UIA</span>
-          <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs font-bold shadow-sm text-zinc-800">Hook</span>
-          <span class="text-[11px] font-mono text-zinc-500 font-medium ml-1">保护常开</span>
-        </div>
-      </div>
-
-      <!-- Handwritten note near Card 3 -->
-      <div class="hidden lg:block absolute bottom-44 left-[320px] font-hand text-zinc-400 text-lg -rotate-6 select-none pointer-events-none">
-        zero friction, clean history
-      </div>
-
-      <!-- Card 4: Bottom-Right (System / Lilac Purple pastel) -->
-      <div class="kinetic-card hidden md:block absolute bottom-4 right-6 lg:right-16 w-[265px] bg-pastel-lilac border border-pastel-lilacBorder rounded-[28px] p-6 text-left shadow-soft-card transform -rotate-2 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-lilacTag mb-4 font-mono shadow-sm">
-          DELIVERY MODES
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          自洽三态交付
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed">
-          算术色值<strong>就地替换</strong>，长文<strong>侧边抽屉</strong>，空选区<strong>Spotlight 唤起</strong>。
-        </p>
-      </div>
-
-      <!-- Center Hero Content -->
-      <div class="max-w-xl mx-auto space-y-6 z-10 px-4">
         
-        <!-- Big Playful Handwritten-Style Headline -->
-        <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-zinc-900 leading-[1.1]">
-          划选文字，<br>
-          <span class="font-hand text-5xl sm:text-7xl font-bold text-zinc-800 inline-block -rotate-1 mt-1">
-            你想要做什么？
-          </span>
-        </h1>
-
-        <!-- Kinetic Central Pill Command Bar -->
-        <div class="relative max-w-md mx-auto group">
-          <div class="flex items-center gap-3 bg-zinc-100/90 hover:bg-zinc-100 border border-zinc-200/80 rounded-full px-5 py-3.5 shadow-inner transition">
-            <svg class="w-5 h-5 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input type="text" id="hero-quick-input" value="1024 * 768 / 2" placeholder="输入任意文本、算式或色值..." class="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none font-medium" />
-            <span class="text-[11px] font-mono text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200 shadow-sm shrink-0">双击 Alt</span>
-          </div>
+        <!-- Interactive Scenario Pills -->
+        <div class="scenario-pills">
+            <button onclick="setScenario('calc')" class="pill-btn active" id="pill-calc">🧮 算术求值</button>
+            <button onclick="setScenario('color')" class="pill-btn" id="pill-color">🎨 颜色转换</button>
+            <button onclick="setScenario('cmd')" class="pill-btn" id="pill-cmd">💻 自然语言命令</button>
+            <button onclick="setScenario('naming')" class="pill-btn" id="pill-naming">🔤 变量命名</button>
+            <button onclick="setScenario('error')" class="pill-btn" id="pill-error">🛠️ 报错修复</button>
         </div>
 
-        <!-- Start Button (Kinetic Signature Black Pill CTA) -->
-        <div class="pt-2">
-          <button onclick="triggerFromHero()" class="inline-flex items-center gap-3 px-7 py-4 rounded-full bg-zinc-900 hover:bg-black text-white font-semibold text-sm shadow-xl shadow-zinc-900/15 active:scale-95 transition">
-            <span>启动交互模拟演练</span>
-            <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">➔</span>
-          </button>
+        <div class="nav-links">
+            <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank">GitHub</a>
+            <a href="https://github.com/jjy0230/SmartKey-Jev/blob/main/LICENSE" target="_blank">MIT License</a>
         </div>
+    </nav>
 
-        <!-- Physical Key Shortcut Banner -->
-        <p class="text-xs text-zinc-400 font-mono">
-          网页已挂载键盘监听：直接快速连敲两次 <kbd class="kbd-btn-light">Alt</kbd> 即可呼出卡片
-        </p>
+    <!-- Canvas Area -->
+    <div class="canvas" id="canvas">
 
-      </div>
-
-    </div>
-
-  </section>
-
-  <!-- Interactive Studio / Playground Section -->
-  <section id="playground" class="max-w-7xl mx-auto px-6 lg:px-12 py-16 border-t border-zinc-200/70">
-    
-    <!-- Section Title -->
-    <div class="text-center max-w-2xl mx-auto mb-10 space-y-2">
-      <div class="inline-block px-3 py-1 rounded-full bg-pastel-blue text-pastel-blueTag text-xs font-mono font-bold">
-        STUDIO WORKBENCH
-      </div>
-      <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight">高拟真桌面交互工作台</h2>
-      <p class="text-sm text-zinc-500">
-        完全在浏览器中体验划选文字、双击 Alt 抬起与智能三态交付全流程。
-      </p>
-    </div>
-
-    <!-- Playground Outer Card -->
-    <div class="bg-white rounded-[32px] p-6 lg:p-10 border border-zinc-200/80 shadow-float space-y-8">
-      
-      <!-- Top Preset Bar (Pill Selector) -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-zinc-100">
-        <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
-          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider font-mono mr-1">选择场景:</span>
-          <button onclick="applyPreset('calc')" class="preset-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white transition shrink-0">🧮 算术求值</button>
-          <button onclick="applyPreset('color')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🎨 色值互转</button>
-          <button onclick="applyPreset('cmd')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">💻 自然语言转命令</button>
-          <button onclick="applyPreset('naming')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🔤 驼峰命名</button>
-          <button onclick="applyPreset('error')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🛠️ 报错修复</button>
-          <button onclick="applyPreset('empty')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">⚡ 空选区 (Spotlight)</button>
-        </div>
-
-        <!-- Telemetry Status Pill -->
-        <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs font-mono shrink-0">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span class="text-zinc-500">端到端时延:</span>
-          <span id="telemetry-badge" class="font-bold text-zinc-800">就绪 (待触发)</span>
-        </div>
-      </div>
-
-      <!-- Main Workbench 2-Column Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        <!-- Left: Virtual Application Workspace (7 cols) -->
-        <div class="lg:col-span-7 bg-[#F8FAFC] border border-zinc-200 rounded-[24px] overflow-hidden flex flex-col shadow-sm">
-          
-          <!-- Virtual Window Header -->
-          <div class="bg-white px-5 py-3 border-b border-zinc-200 flex items-center justify-between text-xs select-none">
-            <div class="flex items-center gap-3">
-              <!-- Traffic lights -->
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded-full bg-[#FF5F56] inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-[#27C93F] inline-block"></span>
-              </div>
-              <!-- Window title -->
-              <span id="window-title" class="font-mono text-zinc-600 font-medium">editor.py - Visual Studio Code</span>
-            </div>
-            <span id="window-process-badge" class="font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-pastel-blue text-pastel-blueTag font-bold">code.exe</span>
-          </div>
-
-          <!-- Content Area with Line Numbers -->
-          <div class="p-5 font-mono text-xs flex flex-col min-h-[280px] bg-white relative">
-            <div class="flex items-center justify-between text-zinc-400 text-[11px] mb-3 pb-2 border-b border-zinc-100">
-              <span>划选文本区域（可直接编辑）：</span>
-              <span class="text-zinc-500 font-mono">就地替换目标</span>
-            </div>
-
-            <!-- Gutter + Textarea -->
-            <div class="flex-1 flex gap-3">
-              <div class="text-zinc-300 select-none text-right pr-2 border-r border-zinc-100 font-mono text-xs space-y-1 w-6">
-                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
-              </div>
-              <textarea id="mock-selection" rows="7" spellcheck="false" class="w-full h-full bg-transparent border-0 font-mono text-xs text-zinc-800 focus:outline-none resize-none leading-relaxed selection:bg-pastel-blue" placeholder="划选文本呈现于此..."></textarea>
-            </div>
-
-            <!-- Bottom Action CTA inside Workspace -->
-            <div class="pt-4 mt-2 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div class="text-[11px] text-zinc-400 font-mono flex items-center gap-2">
-                <span>敲击物理按键:</span>
-                <kbd class="kbd-btn-light text-[10px]">Alt</kbd> + <kbd class="kbd-btn-light text-[10px]">Alt</kbd>
-              </div>
-              <button onclick="simulateDoubleAlt()" class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition active:scale-95">
-                <span>⚡ 模拟连击两次 Alt 唤出</span>
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Right: Interactive Dynamic Card Stage (5 cols) -->
-        <div class="lg:col-span-5 flex flex-col space-y-5">
-          
-          <!-- Telemetry Breakdown Box -->
-          <div class="bg-zinc-50 border border-zinc-200/80 rounded-[20px] p-4 text-xs font-mono space-y-2">
-            <div class="flex items-center justify-between font-bold text-zinc-700 pb-1 border-b border-zinc-200/60">
-              <span class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>亚毫秒耗时剖析</span>
-              </span>
-              <span id="telemetry-timer" class="text-zinc-900">0.00 ms</span>
-            </div>
-            <div class="space-y-1.5 text-[11px] text-zinc-500">
-              <div class="flex justify-between">
-                <span>Win32 选区提取:</span>
-                <span id="lat-extract" class="text-zinc-700 font-semibold">0.0 ms</span>
-              </div>
-              <div class="flex justify-between">
-                <span>两级分桶特征打分:</span>
-                <span id="lat-score" class="text-emerald-600 font-bold">&lt; 0.1 ms</span>
-              </div>
-              <div class="flex justify-between">
-                <span>预热池卡片激活:</span>
-                <span id="lat-render" class="text-zinc-700 font-semibold">1.2 ms</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dynamic Floating Preview Area -->
-          <div class="bg-[#F8FAFC] border border-zinc-200 rounded-[24px] p-6 min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+        <!-- Center Hero -->
+        <div class="hero">
+            <h1>what's your<br>intent goal?</h1>
             
-            <!-- State 0: Idle Prompt -->
-            <div id="idle-prompt" class="text-center space-y-3 px-4">
-              <div class="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center mx-auto text-zinc-800 shadow-sm text-lg">
-                🖱️
-              </div>
-              <div class="space-y-1">
-                <p class="text-xs font-bold text-zinc-800">卡片待唤出</p>
-                <p class="text-[11px] text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                  在左侧窗口中点击 <strong class="text-zinc-800">“模拟连击两次 Alt”</strong> 或直接在物理键盘上双击 <kbd class="kbd-btn-light text-[9px]">Alt</kbd>
-                </p>
-              </div>
-            </div>
-
-            <!-- State 1: Top-3 Floating Decision Card (Light Modern Bento Style) -->
-            <div id="smart-overlay-card" class="hidden spring-pop w-full max-w-[320px] bg-white border border-zinc-200/90 rounded-[22px] p-4 shadow-float space-y-3 z-20">
-              
-              <!-- Card Header -->
-              <div class="flex items-center justify-between pb-2 border-b border-zinc-100 text-[11px]">
-                <div class="flex items-center gap-2">
-                  <span id="card-app-tag" class="px-2 py-0.5 rounded-full font-mono font-bold text-[10px] bg-pastel-blue text-pastel-blueTag">VSCODE</span>
-                  <span id="card-snippet-preview" class="text-zinc-500 truncate max-w-[130px] font-mono text-[11px]">"1024 * 768 / 2"</span>
+            <div class="search-trigger-container">
+                <div class="search-trigger" id="search-trigger" onclick="triggerSmartPopup()">
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                        <input type="text" id="main-input" class="search-input" value="1024 * 768 / 2" spellcheck="false">
+                    </div>
+                    <span class="key-hint">Double Alt</span>
                 </div>
-                <span class="text-[10px] text-zinc-400 font-mono">盲按 1 / 2 / 3</span>
-              </div>
+                <span class="hero-subhint">直接敲击两次物理 Alt 键或盲按数字 1/2/3</span>
+            </div>
+        </div>
 
-              <!-- Dynamic Action Rows -->
-              <div id="action-rows-box" class="space-y-2">
+        <!-- Card 1: Top-Left (Sky Blue / Strategy) -->
+        <div class="card" id="card-1" style="z-index: 5;">
+            <div class="card-label" style="background: #bae6fd;">Strategy</div>
+            <h3>Two-Tier Engine</h3>
+            <p>Sub-millisecond intent prediction for power users.</p>
+            <div class="growth-curve">
+                <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
+                    <path d="M0 40 Q 25 35, 50 20 T 100 5" fill="none" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Card 2: Top-Right (Peach / Live Stats) -->
+        <div class="card" id="card-2" style="z-index: 4;">
+            <div class="card-label" style="background: #fed7aa;">Live Stats</div>
+            <h3>Performance</h3>
+            <div class="stat">&lt; 1.2ms <span>Warm Pool</span></div>
+            <p>Zero clipboard history pollution with synthetic Ctrl+C isolation.</p>
+        </div>
+
+        <!-- Card 3: Bottom-Left (Mint / Platform) -->
+        <div class="card" id="card-3" style="z-index: 3;">
+            <div class="card-label" style="background: #bbf7d0;">Platform</div>
+            <h3>Multi-Channel</h3>
+            <p>In-place replace, slide-out drawer, or Spotlight launcher.</p>
+            <div style="display: flex; gap: 8px; margin-top: 14px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #000; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-size: 11px; font-weight: 700; font-family: monospace;">UIA</span>
+                </div>
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #0ea5e9; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: white; font-size: 11px; font-weight: 700; font-family: monospace;">Hook</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Bottom-Right (Lilac / System) -->
+        <div class="card" id="card-4" style="z-index: 2;">
+            <div class="card-label" style="background: #e9d5ff;">System</div>
+            <h3>Growth Studio</h3>
+            <p>Instant dynamic shortcut dispatcher for Windows desktop.</p>
+        </div>
+
+        <!-- Handwritten Annotations -->
+        <div class="annotation" style="top: 30%; left: 25%;">← built for speed</div>
+        <div class="annotation" style="bottom: 30%; right: 25%;">fully managed →</div>
+        <div class="annotation" style="top: 60%; left: 15%; transform: rotate(-10deg);">your niche, amplified</div>
+
+        <!-- Animated Ambient Dots -->
+        <div class="dot" style="top: 10%; left: 40%;"></div>
+        <div class="dot" style="bottom: 20%; left: 60%;"></div>
+        <div class="dot" style="top: 80%; left: 5%;"></div>
+        <div class="dot" style="top: 50%; right: 15%;"></div>
+
+        <!-- SmartKey Pop-up Decision Card -->
+        <div class="smart-popup" id="smart-popup">
+            <div class="popup-header">
+                <span class="app-badge" id="popup-app-badge">CODE.EXE</span>
+                <span id="popup-preview-text">"1024 * 768 / 2"</span>
+                <span>盲按 1/2/3</span>
+            </div>
+            
+            <div class="popup-actions" id="popup-actions">
                 <!-- Dynamically populated -->
-              </div>
-
-              <!-- Footer Hint -->
-              <div class="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
-                <span>两级分桶置信度</span>
-                <span>Esc 关闭</span>
-              </div>
             </div>
 
-            <!-- State 2: Spotlight Launcher (When Empty Selection) -->
-            <div id="spotlight-overlay-card" class="hidden spring-pop w-full max-w-[340px] bg-white border border-zinc-200/90 rounded-[22px] p-4 shadow-float space-y-3 z-20">
-              <div class="flex items-center gap-2.5 bg-zinc-50 px-3.5 py-2.5 rounded-xl border border-zinc-200">
-                <span class="text-amber-500">⚡</span>
-                <input type="text" id="spotlight-input" placeholder="输入命令或关键词搜索调度..." class="w-full bg-transparent text-xs text-zinc-800 focus:outline-none font-medium placeholder-zinc-400" />
-                <kbd class="kbd-btn-light text-[9px]">↵</kbd>
-              </div>
-              <div class="space-y-1.5 text-xs">
-                <div onclick="executeSpotlightAction('calc')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>🧮</span><span>即时浮点算术计算器</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">calc</span>
+            <div class="popup-footer">
+                <span>两级分桶置信度收敛</span>
+                <span>按 Esc 隐藏</span>
+            </div>
+        </div>
+
+        <!-- Slide-out Drawer Panel -->
+        <div class="drawer" id="drawer">
+            <div class="drawer-header">
+                <div class="drawer-title" id="drawer-title">📱 手机跨屏接力</div>
+                <button class="close-btn" onclick="closeDrawer()">✕</button>
+            </div>
+            
+            <div class="drawer-body">
+                <div class="qr-box" id="qr-box">
+                    <canvas id="qr-canvas" width="160" height="160"></canvas>
                 </div>
-                <div onclick="executeSpotlightAction('qr')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>📱</span><span>跨屏手机扫码直达</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">qr</span>
-                </div>
-                <div onclick="executeSpotlightAction('scratchpad')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>📌</span><span>唤出无边框置顶便笺</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">pin</span>
-                </div>
-              </div>
+                <div class="drawer-text" id="drawer-text">手机扫码即可将当前选区内容实时同步至移动端剪贴板。</div>
             </div>
 
-          </div>
-
+            <button class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="copyDrawerContent()" id="copy-btn">
+                一键复制结果
+            </button>
         </div>
-
-      </div>
-
-      <!-- Slide-out Drawer Panel (For QR Code, Dictionary, Markdown Details) -->
-      <div id="drawer-panel" class="hidden spring-pop bg-pastel-blue/40 border border-pastel-blueBorder rounded-[24px] p-6 shadow-sm space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-pastel-blueBorder/80">
-          <div class="flex items-center gap-2.5">
-            <span id="drawer-icon-badge" class="w-8 h-8 rounded-full bg-white text-pastel-blueTag flex items-center justify-center text-sm font-bold shadow-sm">📱</span>
-            <div>
-              <h3 id="drawer-heading" class="font-bold text-zinc-900 text-sm">侧边抽屉面板 (Category B 模式)</h3>
-              <p class="text-[11px] text-zinc-600">不打扰主窗体焦点，在屏幕侧边滑出高维信息卡</p>
-            </div>
-          </div>
-          <button onclick="closeDrawer()" class="text-zinc-500 hover:text-zinc-900 px-3 py-1 rounded-full hover:bg-white text-xs font-mono transition flex items-center gap-1.5 shadow-sm">
-            <span>关闭</span>
-            <kbd class="kbd-btn-light text-[9px]">Esc</kbd>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-          <div class="md:col-span-8 space-y-3">
-            <div id="drawer-text-body" class="bg-white p-5 rounded-2xl font-mono text-zinc-800 text-xs leading-relaxed border border-pastel-blueBorder/70 shadow-sm whitespace-pre-wrap"></div>
-            <div class="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-              <span class="text-emerald-700 font-bold">✓ 抽屉无边框滑出耗时: 1.4ms</span>
-              <button onclick="copyDrawerContent()" id="copy-btn" class="px-4 py-1.5 rounded-full bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 transition shadow-sm active:scale-95">
-                一键复制内容
-              </button>
-            </div>
-          </div>
-
-          <!-- Real Scannable High-Res QR Code Canvas -->
-          <div id="qr-container" class="md:col-span-4 flex flex-col items-center justify-center p-5 bg-white rounded-2xl border border-pastel-blueBorder/70 shadow-sm space-y-2">
-            <div class="p-2.5 bg-white rounded-xl shadow-inner border border-zinc-100">
-              <canvas id="qr-canvas" class="w-[140px] h-[140px] block"></canvas>
-            </div>
-            <span class="text-[11px] text-zinc-600 text-center font-mono font-medium">手机扫码实时接力</span>
-          </div>
-        </div>
-      </div>
 
     </div>
 
-  </section>
-
-  <!-- Technical Comparison & Architectural Superiority Section -->
-  <section id="matrix" class="max-w-7xl mx-auto px-6 lg:px-12 py-16">
-    <div class="text-center max-w-2xl mx-auto mb-12 space-y-2">
-      <div class="inline-block px-3 py-1 rounded-full bg-pastel-mint text-pastel-mintTag text-xs font-mono font-bold">
-        COMPARISON MATRIX
-      </div>
-      <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight">传统划词工具 vs SmartKey-Jev</h2>
-      <p class="text-sm text-zinc-500">为什么我们坚决拒绝 20 个图标平铺？深度对比两级分桶规则的工程演进。</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-      
-      <!-- Card 1 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-blue text-pastel-blueTag flex items-center justify-center font-bold text-base mb-2">
-          ⚡
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">两级分桶极速收敛</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          传统工具无论用户选中什么，一律弹出翻译、搜索、截图等 20 个图标，认知负荷极重。SmartKey-Jev 纯内存启发式两级过滤，在按键抬起瞬间<strong>仅推荐置信度最高的前 3 个动作</strong>。
-        </p>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-mint text-pastel-mintTag flex items-center justify-center font-bold text-base mb-2">
-          🛡️
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">系统历史防污染</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          常规取词工具滥发 <kbd class="kbd-btn-light text-[10px]">Ctrl+C</kbd>，导致 Windows <kbd class="kbd-btn-light text-[10px]">Win+V</kbd> 历史充斥碎片垃圾。SmartKey-Jev 兜底合成复制时注入隔离阻隔标志，确保系统剪贴板干干净净。
-        </p>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-peach text-pastel-peachTag flex items-center justify-center font-bold text-base mb-2">
-          ⌨️
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">键盘盲打就地替换</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          无需鼠标二次瞄准移动。卡片弹出后直接盲按数字键 <kbd class="kbd-btn-light text-[10px]">1</kbd> <kbd class="kbd-btn-light text-[10px]">2</kbd> <kbd class="kbd-btn-light text-[10px]">3</kbd>，算式自动求值替换，色值自动转 RGB，流式体验一气呵成。
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="border-t border-zinc-200 py-12 text-center text-xs text-zinc-500 space-y-3 bg-white">
-    <div class="flex items-center justify-center gap-4 text-zinc-600 font-medium">
-      <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank" class="hover:text-zinc-900 transition">GitHub 仓库源码</a>
-      <span>·</span>
-      <a href="https://github.com/jjy0230/SmartKey-Jev/blob/main/LICENSE" target="_blank" class="hover:text-zinc-900 transition">MIT License</a>
-      <span>·</span>
-      <span>作者: jjy0230</span>
-    </div>
-    <p class="font-mono text-zinc-400 text-[11px]">SmartKey-Jev: Desktop Instant Intent Predictor & Dynamic Shortcut Dispatcher</p>
-  </footer>
-
-  <!-- Interactive JavaScript Engine -->
-  <script>
-    // Preset Scenarios Data
-    const SCENARIOS = {
-      calc: {
-        process: 'code.exe',
-        title: 'editor.py - Visual Studio Code',
-        text: '1024 * 768 / 2',
-        actions: [
-          { key: 1, id: 'calc_eval', title: '就地求值', subtitle: '直接替换为 393216', prob: 99.4, mode: 'A', icon: '🧮', badge: '就地替换' },
-          { key: 2, id: 'qr_relay', title: '生成二维码', subtitle: '手机扫码跨屏接力', prob: 0.4, mode: 'B', icon: '📱', badge: '抽屉模式' },
-          { key: 3, id: 'search_web', title: '网络搜索', subtitle: '浏览器搜索公式', prob: 0.2, mode: 'C', icon: '🔍', badge: '外派搜索' }
-        ]
-      },
-      color: {
-        process: 'code.exe',
-        title: 'theme.css - Visual Studio Code',
-        text: '#4A90E2',
-        actions: [
-          { key: 1, id: 'color_rgb', title: '转换 RGB 色值', subtitle: 'rgb(74, 144, 226)', prob: 98.6, mode: 'A', icon: '🎨', badge: '就地替换' },
-          { key: 2, id: 'color_hsl', title: '转换 HSL 色值', subtitle: 'hsl(212, 72%, 59%)', prob: 1.1, mode: 'A', icon: '🌈', badge: '就地替换' },
-          { key: 3, id: 'qr_relay', title: '生成色值二维码', subtitle: '手机扫码读取色卡', prob: 0.3, mode: 'B', icon: '📱', badge: '抽屉模式' }
-        ]
-      },
-      cmd: {
-        process: 'windowsterminal.exe',
-        title: 'PowerShell - Administrator',
-        text: '回退上一个commit并保留工作区修改',
-        actions: [
-          { key: 1, id: 'cmd_reset', title: '转标准 Git 命令', subtitle: 'git reset --soft HEAD~1', prob: 98.9, mode: 'A', icon: '💻', badge: '就地替换' },
-          { key: 2, id: 'search_git', title: '搜索 Git 用法', subtitle: '查询 reset 官方文档', prob: 0.8, mode: 'C', icon: '🔍', badge: '外派搜索' },
-          { key: 3, id: 'pin_note', title: '置顶为便签', subtitle: '钉在屏幕边缘常驻', prob: 0.3, mode: 'B', icon: '📌', badge: '抽屉模式' }
-        ]
-      },
-      naming: {
-        process: 'code.exe',
-        title: 'user_service.py - Visual Studio Code',
-        text: 'user_profile_data',
-        actions: [
-          { key: 1, id: 'name_camel', title: '转 camelCase', subtitle: 'userProfileData', prob: 96.8, mode: 'A', icon: '🔤', badge: '就地替换' },
-          { key: 2, id: 'name_pascal', title: '转 PascalCase', subtitle: 'UserProfileData', prob: 2.4, mode: 'A', icon: '🔤', badge: '就地替换' },
-          { key: 3, id: 'dict_lookup', title: '查词与释义', subtitle: '查询 profile 单词定义', prob: 0.8, mode: 'B', icon: '📖', badge: '抽屉模式' }
-        ]
-      },
-      error: {
-        process: 'code.exe',
-        title: 'server.py - Visual Studio Code',
-        text: 'Traceback (most recent call last):\n  File "server.py", line 42\nKeyError: \'auth_token\'',
-        actions: [
-          { key: 1, id: 'fix_stack', title: '注入防御捕获', subtitle: '就地生成 try-except 容错', prob: 99.8, mode: 'A', icon: '🛠️', badge: '就地替换' },
-          { key: 2, id: 'explain_code', title: '解释异常根因', subtitle: '字典键缺失原因排查', prob: 0.1, mode: 'B', icon: '💡', badge: '抽屉模式' },
-          { key: 3, id: 'search_web', title: '搜索堆栈方案', subtitle: '在 GitHub/SO 检索报错', prob: 0.1, mode: 'C', icon: '🔍', badge: '外派搜索' }
-        ]
-      },
-      empty: {
-        process: 'explorer.exe',
-        title: 'Windows Desktop',
-        text: '',
-        actions: []
-      }
-    };
-
-    let activeScenarioKey = 'calc';
-    let currentActions = [];
-    let isCardOpen = false;
-    let isSpotlightOpen = false;
-
-    // Physical Double Alt Detection
-    let lastAltTime = 0;
-    window.addEventListener('keydown', (e) => {
-      // Physical Alt Key
-      if (e.key === 'Alt') {
-        const now = Date.now();
-        if (now - lastAltTime < 380) {
-          e.preventDefault();
-          simulateDoubleAlt();
-          lastAltTime = 0;
-          return;
-        }
-        lastAltTime = now;
-      }
-
-      // Esc to close
-      if (e.key === 'Escape') {
-        closeAllOverlays();
-        return;
-      }
-
-      // Blind number keys: 1, 2, 3
-      if (isCardOpen && ['1', '2', '3'].includes(e.key)) {
-        e.preventDefault();
-        const actionIdx = parseInt(e.key) - 1;
-        if (currentActions[actionIdx]) {
-          triggerAction(currentActions[actionIdx]);
-        }
-      }
-
-      // Spotlight Enter key
-      if (isSpotlightOpen && e.key === 'Enter') {
-        e.preventDefault();
-        executeSpotlightAction('calc');
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      applyPreset('calc');
-    });
-
-    function applyPreset(key) {
-      activeScenarioKey = key;
-      const s = SCENARIOS[key];
-      
-      document.getElementById('mock-selection').value = s.text;
-      document.getElementById('window-process-badge').textContent = s.process;
-      document.getElementById('window-title').textContent = s.title;
-
-      // Update active preset pill styling
-      document.querySelectorAll('.preset-pill').forEach(b => {
-        b.classList.remove('bg-zinc-900', 'text-white');
-        b.classList.add('bg-zinc-100', 'text-zinc-700');
-      });
-      event?.target?.closest('button')?.classList.remove('bg-zinc-100', 'text-zinc-700');
-      event?.target?.closest('button')?.classList.add('bg-zinc-900', 'text-white');
-
-      closeAllOverlays();
-      document.getElementById('telemetry-badge').textContent = '就绪 (待触发)';
-    }
-
-    function triggerFromHero() {
-      const heroVal = document.getElementById('hero-quick-input').value.trim();
-      if (heroVal) {
-        document.getElementById('mock-selection').value = heroVal;
-      }
-      document.getElementById('playground').scrollIntoView({ behavior: 'smooth' });
-      setTimeout(() => {
-        simulateDoubleAlt();
-      }, 500);
-    }
-
-    function simulateDoubleAlt() {
-      const text = document.getElementById('mock-selection').value.trim();
-      const idlePrompt = document.getElementById('idle-prompt');
-      const overlayCard = document.getElementById('smart-overlay-card');
-      const spotlightCard = document.getElementById('spotlight-overlay-card');
-      const drawer = document.getElementById('drawer-panel');
-
-      idlePrompt.classList.add('hidden');
-      drawer.classList.add('hidden');
-
-      // Empty selection fallback to Spotlight
-      if (!text) {
-        isCardOpen = false;
-        isSpotlightOpen = true;
-        overlayCard.classList.add('hidden');
-        spotlightCard.classList.remove('hidden');
-        document.getElementById('spotlight-input').focus();
-        updateTelemetry(0.05, 0.04, 1.15);
-        return;
-      }
-
-      // Populate Top-3 Action Card
-      isCardOpen = true;
-      isSpotlightOpen = false;
-      spotlightCard.classList.add('hidden');
-      overlayCard.classList.remove('hidden');
-
-      const s = SCENARIOS[activeScenarioKey] || SCENARIOS.calc;
-      currentActions = s.actions;
-
-      document.getElementById('card-app-tag').textContent = s.process.replace('.exe', '').toUpperCase();
-      document.getElementById('card-snippet-preview').textContent = `"${text.substring(0, 18)}${text.length > 18 ? '...' : ''}"`;
-
-      const rowsBox = document.getElementById('action-rows-box');
-      rowsBox.innerHTML = '';
-
-      s.actions.forEach((act, idx) => {
-        const row = document.createElement('div');
-        row.className = 'group flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/60 hover:border-zinc-300 cursor-pointer transition active:scale-[0.98] select-none';
-        row.onclick = () => triggerAction(act);
-
-        row.innerHTML = `
-          <div class="flex items-center gap-2.5">
-            <kbd class="kbd-btn-light text-[10px] w-5 h-5 flex items-center justify-center">${act.key}</kbd>
-            <div class="text-left">
-              <div class="font-bold text-zinc-900 flex items-center gap-1.5 text-xs">
-                <span>${act.icon}</span>
-                <span>${act.title}</span>
-              </div>
-              <div class="text-[10px] text-zinc-500 font-mono">${act.subtitle}</div>
+    <!-- Footer CTA -->
+    <div class="footer-cta">
+        <button class="btn-primary" onclick="triggerSmartPopup()">
+            Start Your Engine
+            <div class="arrow-circle">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14m-7-7 7 7-7 7"></path></svg>
             </div>
-          </div>
-          <div class="text-right flex flex-col items-end gap-0.5">
-            <span class="text-[9px] px-2 py-0.5 rounded-full bg-white text-zinc-600 border border-zinc-200 font-mono">${act.badge}</span>
-            <span class="font-mono text-[10px] text-emerald-600 font-bold">${act.prob}%</span>
-          </div>
-        `;
-        rowsBox.appendChild(row);
-      });
+        </button>
+    </div>
 
-      updateTelemetry(
-        (Math.random() * 2 + 5.2).toFixed(1),
-        (Math.random() * 0.05 + 0.04).toFixed(2),
-        (Math.random() * 0.5 + 1.1).toFixed(1)
-      );
-    }
+    <script>
+        // Scenario Presets
+        const SCENARIOS = {
+            calc: {
+                app: 'code.exe',
+                text: '1024 * 768 / 2',
+                actions: [
+                    { key: 1, title: '就地求值', sub: '替换为 393216', prob: '99.4%', mode: 'A', res: '393216' },
+                    { key: 2, title: '生成二维码', sub: '手机扫码跨屏接力', prob: '0.4%', mode: 'B', res: '1024 * 768 / 2' },
+                    { key: 3, title: '网络搜索', sub: '搜索公式用法', prob: '0.2%', mode: 'C', res: 'https://www.google.com/search?q=1024*768/2' }
+                ]
+            },
+            color: {
+                app: 'code.exe',
+                text: '#4A90E2',
+                actions: [
+                    { key: 1, title: '转换 RGB 色值', sub: 'rgb(74, 144, 226)', prob: '98.6%', mode: 'A', res: 'rgb(74, 144, 226)' },
+                    { key: 2, title: '转换 HSL 色值', sub: 'hsl(212, 72%, 59%)', prob: '1.1%', mode: 'A', res: 'hsl(212, 72%, 59%)' },
+                    { key: 3, title: '生成色值二维码', sub: '手机读取色卡', prob: '0.3%', mode: 'B', res: '#4A90E2' }
+                ]
+            },
+            cmd: {
+                app: 'terminal.exe',
+                text: '回退上一个commit并保留修改',
+                actions: [
+                    { key: 1, title: '转标准 Git 命令', sub: 'git reset --soft HEAD~1', prob: '98.9%', mode: 'A', res: 'git reset --soft HEAD~1' },
+                    { key: 2, title: '搜索 Git 用法', sub: '查询 reset 官方文档', prob: '0.8%', mode: 'C', res: 'https://git-scm.com/docs/git-reset' },
+                    { key: 3, title: '手机备忘', sub: '扫码存入手机', prob: '0.3%', mode: 'B', res: 'git reset --soft HEAD~1' }
+                ]
+            },
+            naming: {
+                app: 'code.exe',
+                text: 'user_profile_data',
+                actions: [
+                    { key: 1, title: '转 camelCase', sub: 'userProfileData', prob: '96.8%', mode: 'A', res: 'userProfileData' },
+                    { key: 2, title: '转 PascalCase', sub: 'UserProfileData', prob: '2.4%', mode: 'A', res: 'UserProfileData' },
+                    { key: 3, title: '查词与释义', sub: '查询 profile 单词定义', prob: '0.8%', mode: 'B', res: 'Profile: 个人画像/配置资料' }
+                ]
+            },
+            error: {
+                app: 'code.exe',
+                text: 'KeyError: \'auth_token\'',
+                actions: [
+                    { key: 1, title: '注入防御捕获', sub: 'try-except 容错封装', prob: '99.8%', mode: 'A', res: 'try:\n    auth = data.get(\'auth_token\')\nexcept KeyError:\n    auth = None' },
+                    { key: 2, title: '搜索报错堆栈', sub: '在 GitHub/SO 检索', prob: '0.1%', mode: 'C', res: 'https://stackoverflow.com/search?q=KeyError:auth_token' },
+                    { key: 3, title: '扫码排查', sub: '手机发送至排障群', prob: '0.1%', mode: 'B', res: 'KeyError: auth_token' }
+                ]
+            }
+        };
 
-    function updateTelemetry(extract, score, render) {
-      document.getElementById('lat-extract').textContent = `${extract} ms`;
-      document.getElementById('lat-score').textContent = `${score} ms`;
-      document.getElementById('lat-render').textContent = `${render} ms`;
+        let currentScenario = 'calc';
+        let isPopupOpen = false;
 
-      const total = (parseFloat(extract) + parseFloat(score) + parseFloat(render)).toFixed(1);
-      document.getElementById('telemetry-timer').textContent = `${total} ms`;
-      document.getElementById('telemetry-badge').textContent = `${total} ms (端到端收敛)`;
-    }
+        const cards = document.querySelectorAll('.card');
+        const dots = document.querySelectorAll('.dot');
+        const canvas = document.getElementById('canvas');
 
-    function triggerAction(act) {
-      const editor = document.getElementById('mock-selection');
-      const rawText = editor.value.trim();
+        // Mousemove Parallax Physics (from kinetic_design.html)
+        let mouseX = 0;
+        let mouseY = 0;
 
-      if (act.mode === 'A') {
-        // In-Place Replace Mode
-        if (act.id === 'calc_eval') {
-          editor.value = '393216';
-        } else if (act.id === 'color_rgb') {
-          editor.value = 'rgb(74, 144, 226)';
-        } else if (act.id === 'color_hsl') {
-          editor.value = 'hsl(212, 72%, 59%)';
-        } else if (act.id === 'cmd_reset') {
-          editor.value = 'git reset --soft HEAD~1';
-        } else if (act.id === 'name_camel') {
-          editor.value = 'userProfileData';
-        } else if (act.id === 'name_pascal') {
-          editor.value = 'UserProfileData';
-        } else if (act.id === 'fix_stack') {
-          editor.value = `# Auto-Fixed with Guardrails\ntry:\n    auth_token = headers['auth_token']\nexcept KeyError:\n    auth_token = None`;
-        }
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) - 0.5;
+            mouseY = (e.clientY / window.innerHeight) - 0.5;
 
-        editor.classList.add('flash-highlight');
-        setTimeout(() => editor.classList.remove('flash-highlight'), 1000);
+            cards.forEach((card, index) => {
+                const speed = (index + 1) * 20;
+                const x = mouseX * speed;
+                const y = mouseY * speed;
+                const rotation = card.id === 'card-1' || card.id === 'card-4' ? -3 : (card.id === 'card-3' ? 4 : 2);
+                card.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+            });
 
-        closeAllOverlays();
-        showFeedback(`✓ 盲按 [${act.key}] 执行成功！原选中文本已完成 <strong class="text-zinc-900">就地替换 (In-place Replace)</strong>`);
-
-      } else if (act.mode === 'B') {
-        closeAllOverlays();
-        openDrawer(act, rawText);
-      } else {
-        closeAllOverlays();
-        showFeedback(`✓ 系统外派成功！已调起默认浏览器检索: <strong class="text-zinc-900">${rawText}</strong>`);
-      }
-    }
-
-    function openDrawer(act, text) {
-      const drawer = document.getElementById('drawer-panel');
-      drawer.classList.remove('hidden');
-
-      document.getElementById('drawer-icon-badge').textContent = act.icon;
-      document.getElementById('drawer-heading').textContent = `${act.title} · 侧边抽屉`;
-
-      const body = document.getElementById('drawer-text-body');
-      const qrContainer = document.getElementById('qr-container');
-
-      if (act.id === 'qr_relay') {
-        qrContainer.classList.remove('hidden');
-        body.textContent = `【跨屏接力服务】\n\n已将选中文本转换为无损高抗噪二维码。\n请使用微信、iOS 相机对准右侧二维码，即可瞬间同步至手机剪贴板：\n\n内容载荷: ${text}`;
-        renderRealQRCode(text || "https://github.com/jjy0230/SmartKey-Jev");
-      } else if (act.id === 'dict_lookup') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `### profile /ˈproʊ.faɪl/\n\n【名词】简况，画像，侧影\n• 计算机语境：User Profile (用户画像 / 配置文件)\n• 例句：The system builds a dynamic user profile to converge intent.\n• 权威来源：牛津高级英汉双解词典`;
-      } else if (act.id === 'pin_note') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `📌 [置顶便签已生成]\n\n便签内容：${text}\n状态：已固定在屏幕右下角最顶层 (WS_EX_TOPMOST)\n操作：双击便签可编辑，滚轮缩放字号。`;
-      } else if (act.id === 'explain_code') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `💡 [Python 堆栈诊断建议]\n\n• 异常类型：KeyError: 'auth_token'\n• 根因分析：在未验证字典是否包含该键时直接使用下标访问\n• 最佳实践：使用 .get('auth_token', None) 避免抛出致命中断。`;
-      }
-    }
-
-    function renderRealQRCode(text) {
-      const canvas = document.getElementById('qr-canvas');
-      if (typeof QRCode !== 'undefined') {
-        QRCode.toCanvas(canvas, text, {
-          width: 140,
-          margin: 1,
-          color: {
-            dark: '#18181B',
-            light: '#FFFFFF'
-          }
-        }, function (error) {
-          if (error) console.error(error);
+            dots.forEach((dot, index) => {
+                const speed = (index + 1) * 40;
+                const x = mouseX * speed;
+                const y = mouseY * speed;
+                dot.style.transform = `translate(${x}px, ${y}px)`;
+            });
         });
-      }
-    }
 
-    function closeDrawer() {
-      document.getElementById('drawer-panel').classList.add('hidden');
-      document.getElementById('idle-prompt').classList.remove('hidden');
-    }
+        // Draggable Cards Physics (from kinetic_design.html)
+        cards.forEach(card => {
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
 
-    function closeAllOverlays() {
-      isCardOpen = false;
-      isSpotlightOpen = false;
-      document.getElementById('smart-overlay-card').classList.add('hidden');
-      document.getElementById('spotlight-overlay-card').classList.add('hidden');
-    }
+            card.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                card.style.zIndex = 100;
+                startX = e.clientX;
+                startY = e.clientY;
+                const rect = card.getBoundingClientRect();
+                initialX = rect.left;
+                initialY = rect.top;
+            });
 
-    function executeSpotlightAction(type) {
-      closeAllOverlays();
-      if (type === 'calc') {
-        applyPreset('calc');
-        simulateDoubleAlt();
-      } else if (type === 'qr') {
-        openDrawer({ id: 'qr_relay', icon: '📱', title: '手机扫码跨屏接力' }, "https://github.com/jjy0230/SmartKey-Jev");
-      } else if (type === 'scratchpad') {
-        openDrawer({ id: 'pin_note', icon: '📌', title: '便签卡片' }, "SmartKey 快速灵感备忘录");
-      }
-    }
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                card.style.left = `${initialX + dx}px`;
+                card.style.top = `${initialY + dy}px`;
+                card.style.transform = `rotate(0deg) scale(1.04)`;
+            });
 
-    function showFeedback(htmlMessage) {
-      const prompt = document.getElementById('idle-prompt');
-      prompt.innerHTML = `
-        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-2 font-bold shadow-sm">✓</div>
-        <p class="text-xs text-zinc-700 leading-relaxed">${htmlMessage}</p>
-        <button onclick="document.getElementById('idle-prompt').innerHTML = defaultIdleHtml;" class="text-[10px] text-zinc-400 hover:text-zinc-600 font-mono mt-2 underline">重置状态</button>
-      `;
-      prompt.classList.remove('hidden');
-    }
+            window.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                card.style.transform = `scale(1)`;
+            });
+        });
 
-    const defaultIdleHtml = `
-      <div class="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center mx-auto text-zinc-800 shadow-sm text-lg">
-        🖱️
-      </div>
-      <div class="space-y-1">
-        <p class="text-xs font-bold text-zinc-800">卡片待唤出</p>
-        <p class="text-[11px] text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-          在左侧窗口中点击 <strong class="text-zinc-800">“模拟连击两次 Alt”</strong> 或直接在物理键盘上双击 <kbd class="kbd-btn-light text-[9px]">Alt</kbd>
-        </p>
-      </div>
-    `;
+        // Dot Sinusoidal Pulse Animation (from kinetic_design.html)
+        function animate() {
+            const time = Date.now() * 0.001;
+            dots.forEach((dot, i) => {
+                dot.style.opacity = 0.3 + Math.sin(time + i) * 0.2;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
 
-    function copyDrawerContent() {
-      const text = document.getElementById('drawer-text-body').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = document.getElementById('copy-btn');
-        btn.textContent = '✓ 已复制到剪贴板';
-        btn.classList.add('text-emerald-700');
-        setTimeout(() => {
-          btn.textContent = '一键复制内容';
-          btn.classList.remove('text-emerald-700');
-        }, 2000);
-      });
-    }
-  </script>
+        // Scenario Preset Switching
+        function setScenario(key) {
+            currentScenario = key;
+            const s = SCENARIOS[key];
+            document.getElementById('main-input').value = s.text;
+            
+            document.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`pill-${key}`).classList.add('active');
+            
+            closeAll();
+        }
+
+        function triggerSmartPopup() {
+            const popup = document.getElementById('smart-popup');
+            const s = SCENARIOS[currentScenario];
+            const text = document.getElementById('main-input').value.trim();
+
+            document.getElementById('popup-app-badge').textContent = s.app.toUpperCase();
+            document.getElementById('popup-preview-text').textContent = `"${text.substring(0, 16)}${text.length > 16 ? '...' : ''}"`;
+
+            const container = document.getElementById('popup-actions');
+            container.innerHTML = '';
+
+            s.actions.forEach(act => {
+                const item = document.createElement('div');
+                item.className = 'action-item';
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    executeAction(act);
+                };
+                item.innerHTML = `
+                    <div class="action-left">
+                        <div class="keycap">${act.key}</div>
+                        <div class="action-info">
+                            <span class="action-title">${act.title}</span>
+                            <span class="action-subtitle">${act.sub}</span>
+                        </div>
+                    </div>
+                    <span class="action-prob">${act.prob}</span>
+                `;
+                container.appendChild(item);
+            });
+
+            popup.classList.add('active');
+            document.getElementById('search-trigger').classList.add('active');
+            isPopupOpen = true;
+        }
+
+        function executeAction(act) {
+            closePopup();
+
+            if (act.mode === 'A') {
+                // In-place replace
+                const input = document.getElementById('main-input');
+                input.value = act.res;
+                const trigger = document.getElementById('search-trigger');
+                trigger.classList.add('flash');
+                setTimeout(() => trigger.classList.remove('flash'), 1000);
+            } else if (act.mode === 'B') {
+                // Drawer mode with real QR code
+                openDrawer(act);
+            } else {
+                // External search
+                window.open(act.res, '_blank');
+            }
+        }
+
+        function openDrawer(act) {
+            const drawer = document.getElementById('drawer');
+            drawer.classList.add('active');
+            document.getElementById('drawer-title').textContent = act.title;
+            document.getElementById('drawer-text').textContent = `内容载荷: ${act.res}`;
+
+            const canvas = document.getElementById('qr-canvas');
+            if (typeof QRCode !== 'undefined') {
+                QRCode.toCanvas(canvas, act.res, {
+                    width: 160,
+                    margin: 1,
+                    color: { dark: '#111111', light: '#ffffff' }
+                });
+            }
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('active');
+        }
+
+        function closePopup() {
+            document.getElementById('smart-popup').classList.remove('active');
+            document.getElementById('search-trigger').classList.remove('active');
+            isPopupOpen = false;
+        }
+
+        function closeAll() {
+            closePopup();
+            closeDrawer();
+        }
+
+        function resetToInitial() {
+            setScenario('calc');
+        }
+
+        function copyDrawerContent() {
+            const txt = document.getElementById('drawer-text').textContent;
+            navigator.clipboard.writeText(txt).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✓ 已复制到剪贴板';
+                setTimeout(() => btn.textContent = '一键复制结果', 2000);
+            });
+        }
+
+        // Global Physical Keyboard Hook Listeners
+        let lastAlt = 0;
+        window.addEventListener('keydown', (e) => {
+            // Physical Double Alt
+            if (e.key === 'Alt') {
+                const now = Date.now();
+                if (now - lastAlt < 350) {
+                    e.preventDefault();
+                    if (isPopupOpen) {
+                        closePopup();
+                    } else {
+                        triggerSmartPopup();
+                    }
+                    lastAlt = 0;
+                    return;
+                }
+                lastAlt = now;
+            }
+
+            // Esc
+            if (e.key === 'Escape') {
+                closeAll();
+            }
+
+            // Blind typing 1 / 2 / 3
+            if (isPopupOpen && ['1', '2', '3'].includes(e.key)) {
+                e.preventDefault();
+                const idx = parseInt(e.key) - 1;
+                const s = SCENARIOS[currentScenario];
+                if (s && s.actions[idx]) {
+                    executeAction(s.actions[idx]);
+                }
+            }
+        });
+
+        // Close on canvas click
+        canvas.addEventListener('click', (e) => {
+            if (!e.target.closest('#smart-popup') && !e.target.closest('#search-trigger') && !e.target.closest('.footer-cta') && !e.target.closest('#drawer') && !e.target.closest('.scenario-pills')) {
+                closeAll();
+            }
+        });
+    </script>
 </body>
 </html>
