@@ -1,8 +1,15 @@
-from .models import MacroCategory, MacroAction, SelectionContext, IntentPrediction
+from .models import (
+    MacroCategory,
+    MacroDeliveryMode,
+    MacroAction,
+    SelectionContext,
+    IntentPrediction,
+)
 from .config import AppConfig, DEFAULT_CONFIG
 
 __all__ = [
     "MacroCategory",
+    "MacroDeliveryMode",
     "MacroAction",
     "SelectionContext",
     "IntentPrediction",

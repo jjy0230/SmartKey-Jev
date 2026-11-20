@@ -1,6 +1,6 @@
 """
 SmartKey-Jev Core Data Models.
-Defines contexts, macros, categories, and prediction payloads.
+Defines contexts, macros, categories, delivery modes, and prediction payloads.
 """
 
 from __future__ import annotations
@@ -19,6 +19,13 @@ class MacroCategory(str, Enum):
     UTILITY = "utility"
 
 
+class MacroDeliveryMode(str, Enum):
+    """How the result of a macro action is presented to the user."""
+    IN_PLACE_REPLACE = "in_place_replace"  # Simulates Ctrl+V to replace selection in foreground editor
+    DRAWER_PANEL = "drawer_panel"          # Slides out semi-transparent Markdown drawer beside card
+    EXTERNAL_DISPATCH = "external_dispatch" # Opens browser, terminal, or system utility
+
+
 @dataclass(frozen=True)
 class MacroAction:
     """Represents an atomic macro action executable by SmartKey-Jev."""
@@ -27,6 +34,7 @@ class MacroAction:
     icon: str
     category: MacroCategory
     description: str
+    delivery_mode: MacroDeliveryMode = MacroDeliveryMode.EXTERNAL_DISPATCH
     default_shortcut: str = "1"
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -34,8 +42,8 @@ class MacroAction:
 @dataclass
 class SelectionContext:
     """Context extracted from the active desktop environment upon hotkey trigger."""
-    text: str                               # Selected text (truncated to max length, e.g., 300 chars)
-    raw_text: str                           # Full selected text
+    text: str                               # Selected text (truncated for fast scoring, max 300 chars)
+    raw_text: str                           # Full selected text (untruncated for actual execution)
     process_name: str                       # Name of foreground process (e.g. 'code.exe', 'chrome.exe')
     process_path: str = ""                  # Full executable path
     window_title: str = ""                  # Foreground window title
@@ -49,7 +57,7 @@ class SelectionContext:
 
     @property
     def char_count(self) -> int:
-        return len(self.text)
+        return len(self.raw_text)
 
 
 @dataclass

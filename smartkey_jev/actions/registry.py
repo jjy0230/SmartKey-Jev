@@ -1,28 +1,23 @@
 """
 System Macro Actions Registry.
-Defines the 12 core atomic macro actions supported by SmartKey-Jev.
+Defines the 12 core atomic macro actions supported by SmartKey-Jev,
+paired with their explicit smart delivery modes.
 """
 
 from typing import Dict, List, Optional
-from ..core.models import MacroAction, MacroCategory
+from ..core.models import MacroAction, MacroCategory, MacroDeliveryMode
 
 
 PRESET_MACROS: List[MacroAction] = [
+    # ── B 类: 侧边半透明抽屉呈现 ──────────────────────────────────────
     MacroAction(
         id="translate",
         title="即时翻译",
         icon="🌐",
         category=MacroCategory.TRANSLATION,
         description="中英双向智能互译与语境对齐",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="1",
-    ),
-    MacroAction(
-        id="fix_code",
-        title="报错修复",
-        icon="🛠️",
-        category=MacroCategory.CODE,
-        description="诊断选中的异常堆栈或代码 Bug 并给出修复方案",
-        default_shortcut="2",
     ),
     MacroAction(
         id="explain_code",
@@ -30,6 +25,7 @@ PRESET_MACROS: List[MacroAction] = [
         icon="💡",
         category=MacroCategory.CODE,
         description="分析代码段控制流、算法复杂度与设计意图",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="3",
     ),
     MacroAction(
@@ -38,6 +34,7 @@ PRESET_MACROS: List[MacroAction] = [
         icon="📑",
         category=MacroCategory.WRITING,
         description="提炼长文、议题或聊天记录的核心 Bullet Points",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="1",
     ),
     MacroAction(
@@ -46,6 +43,7 @@ PRESET_MACROS: List[MacroAction] = [
         icon="📖",
         category=MacroCategory.TRANSLATION,
         description="查询生词音标、词性及专业技术语境用例",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="2",
     ),
     MacroAction(
@@ -54,14 +52,47 @@ PRESET_MACROS: List[MacroAction] = [
         icon="📅",
         category=MacroCategory.PRODUCTIVITY,
         description="自动提取选中文本中的截止时间与事项并加入待办",
+        delivery_mode=MacroDeliveryMode.DRAWER_PANEL,
         default_shortcut="3",
     ),
+
+    # ── A 类: 就地直接替换 ──────────────────────────────────────────
     MacroAction(
         id="format_json",
         title="格式化 JSON",
         icon="🧩",
         category=MacroCategory.UTILITY,
-        description="校验并美化压缩的 JSON/字典结构",
+        description="校验并美化压缩的 JSON/字典结构并就地替换",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="1",
+    ),
+    MacroAction(
+        id="polish_text",
+        title="润色修辞",
+        icon="✨",
+        category=MacroCategory.WRITING,
+        description="消除错别字、口语化表达，优化商务与学术语气",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="3",
+    ),
+    MacroAction(
+        id="fix_code",
+        title="报错修复",
+        icon="🛠️",
+        category=MacroCategory.CODE,
+        description="诊断选中的异常堆栈或代码 Bug 并就地替换修复",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="2",
+    ),
+
+    # ── C 类: 外部系统外派 ──────────────────────────────────────────
+    MacroAction(
+        id="open_url",
+        title="打开链接",
+        icon="🔗",
+        category=MacroCategory.UTILITY,
+        description="直接在浏览器中安全访问提取到的 URL",
+        delivery_mode=MacroDeliveryMode.EXTERNAL_DISPATCH,
         default_shortcut="1",
     ),
     MacroAction(
@@ -70,30 +101,16 @@ PRESET_MACROS: List[MacroAction] = [
         icon="🔍",
         category=MacroCategory.SEARCH,
         description="使用默认浏览器在前沿搜索引擎检索选中文本",
+        delivery_mode=MacroDeliveryMode.EXTERNAL_DISPATCH,
         default_shortcut="2",
-    ),
-    MacroAction(
-        id="polish_text",
-        title="润色修辞",
-        icon="✨",
-        category=MacroCategory.WRITING,
-        description="消除错别字、口语化表达，优化商务与学术语气",
-        default_shortcut="3",
-    ),
-    MacroAction(
-        id="open_url",
-        title="打开链接",
-        icon="🔗",
-        category=MacroCategory.UTILITY,
-        description="直接在浏览器中安全访问提取到的 URL",
-        default_shortcut="1",
     ),
     MacroAction(
         id="regex_test",
         title="正则解析",
         icon="🔍",
         category=MacroCategory.CODE,
-        description="解析正则表达式含义并进行语法测试",
+        description="解析正则表达式并在 Regex101 中交互测试",
+        delivery_mode=MacroDeliveryMode.EXTERNAL_DISPATCH,
         default_shortcut="2",
     ),
     MacroAction(
@@ -102,6 +119,7 @@ PRESET_MACROS: List[MacroAction] = [
         icon="💻",
         category=MacroCategory.UTILITY,
         description="解读并在系统终端安全执行选中的 Shell/PowerShell 脚本命令",
+        delivery_mode=MacroDeliveryMode.EXTERNAL_DISPATCH,
         default_shortcut="3",
     ),
 ]
@@ -124,6 +142,12 @@ class MacroRegistry:
 
     def register(self, macro: MacroAction) -> None:
         self._macros[macro.id] = macro
+
+    def unregister(self, macro_id: str) -> bool:
+        if macro_id in self._macros:
+            del self._macros[macro_id]
+            return True
+        return False
 
 
 DEFAULT_REGISTRY = MacroRegistry()
