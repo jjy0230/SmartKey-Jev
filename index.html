@@ -1,904 +1,1380 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartKey-Jev | 桌面即时意图预测与动态快捷调度中枢</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Google Fonts: Plus Jakarta Sans (Modern UI) + Caveat (Handwritten Sketched Accents) + JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Real QR Code Library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-            hand: ['"Caveat"', 'cursive'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            pastel: {
-              blue: '#E0F2FE',
-              blueBorder: '#BAE6FD',
-              blueTag: '#0284C7',
-              peach: '#FFEDD5',
-              peachBorder: '#FED7AA',
-              peachTag: '#EA580C',
-              mint: '#DCFCE7',
-              mintBorder: '#BBF7D0',
-              mintTag: '#16A34A',
-              lilac: '#F3E8FF',
-              lilacBorder: '#E9D5FF',
-              lilacTag: '#9333EA',
-            }
-          },
-          boxShadow: {
-            'soft-card': '0 20px 40px -15px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(0, 0, 0, 0.03)',
-            'float': '0 25px 50px -12px rgba(15, 23, 42, 0.08)',
-            'keycap-light': '0 2px 0 0 #D1D5DB, inset 0 1px 0 0 #FFFFFF',
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    /* Smooth Scrolling & Selection */
-    html { scroll-behavior: smooth; }
-    ::selection { background-color: #E0E7FF; color: #1E1B4B; }
-
-    /* Custom subtle scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-    /* Keycap 3D Tactile Styling (Light Mode) */
-    .kbd-btn-light {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-family: '"JetBrains Mono"', monospace;
-      font-weight: 700;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
-      color: #1E293B;
-      border: 1px solid #CBD5E1;
-      border-bottom: 2px solid #94A3B8;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-      user-select: none;
-      transition: all 0.08s ease;
-    }
-    .kbd-btn-light:active, .kbd-btn-light.pressed {
-      transform: translateY(1.5px);
-      border-bottom-width: 1px;
-      box-shadow: 0 0 1px rgba(0,0,0,0.1);
-      filter: brightness(0.95);
-    }
-
-    /* Spring Animation */
-    @keyframes springIn {
-      0% { opacity: 0; transform: translateY(-10px) scale(0.95); }
-      70% { opacity: 1; transform: translateY(2px) scale(1.01); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .spring-pop {
-      animation: springIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    /* Flash Highlight for In-Place Replacement */
-    @keyframes flashGreen {
-      0% { background-color: rgba(74, 222, 128, 0.45); }
-      100% { background-color: transparent; }
-    }
-    .flash-highlight {
-      animation: flashGreen 1s ease-out;
-    }
-
-    /* Floating Canvas Card Hover Dynamics */
-    .kinetic-card {
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-    }
-    .kinetic-card:hover {
-      transform: translateY(-4px) scale(1.02) !important;
-      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.1);
-    }
-  </style>
-</head>
-<body class="bg-[#FAFAFA] text-zinc-900 font-sans antialiased min-h-screen relative overflow-x-hidden">
-
-  <!-- Top Navigation Bar -->
-  <nav class="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between sticky top-0 z-50 bg-[#FAFAFA]/90 backdrop-blur-md">
-    <!-- Brand -->
-    <a href="#" class="flex items-center gap-2 group">
-      <span class="font-extrabold text-2xl tracking-tight text-zinc-900 group-hover:opacity-80 transition">SmartKey.</span>
-      <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">v0.2.0</span>
-    </a>
-
-    <!-- Nav Items -->
-    <div class="flex items-center gap-8 text-sm font-medium text-zinc-500">
-      <a href="#playground" class="hover:text-zinc-900 transition">交互模拟</a>
-      <a href="#architecture" class="hover:text-zinc-900 transition">两级分桶</a>
-      <a href="#matrix" class="hover:text-zinc-900 transition hidden sm:inline-block">特性对比</a>
-      <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank" class="flex items-center gap-2 text-zinc-900 font-semibold hover:opacity-75 transition">
-        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        <span>GitHub 开源</span>
-      </a>
-    </div>
-  </nav>
-
-  <!-- Hero & Floating Bento Canvas Section (Kinetic Style) -->
-  <section class="max-w-7xl mx-auto px-6 lg:px-12 pt-8 pb-16 relative">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartKey-Jev // Desktop Instant Intent Dispatcher</title>
     
-    <!-- Central Stage Container -->
-    <div class="relative min-h-[580px] lg:min-h-[640px] flex flex-col items-center justify-center text-center">
-      
-      <!-- Card 1: Top-Left (Strategy / Sky Blue pastel) -->
-      <div class="kinetic-card hidden md:block absolute top-4 left-4 lg:left-12 w-[270px] bg-pastel-blue border border-pastel-blueBorder rounded-[28px] p-6 text-left shadow-soft-card transform -rotate-3 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-blueTag mb-4 font-mono shadow-sm">
-          TWO-TIER ENGINE
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          两级分桶意图预测
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed mb-4">
-          前台进程粗筛 + 上下文精算，自洽收敛出最精准的 Top-3 候选。
-        </p>
-        <!-- Blue Sparkline Wave -->
-        <svg class="w-full h-8 text-sky-500 overflow-visible" fill="none" viewBox="0 0 200 30" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M 0,25 C 50,22 100,5 200,2" />
-        </svg>
-      </div>
-
-      <!-- Handwritten note near Card 1 -->
-      <div class="hidden lg:block absolute top-28 left-[310px] font-hand text-zinc-400 text-lg rotate-3 select-none pointer-events-none">
-        built for microsecond speed ~
-      </div>
-
-      <!-- Card 2: Top-Right (Live Stats / Peach pastel) -->
-      <div class="kinetic-card hidden md:block absolute top-8 right-4 lg:right-12 w-[260px] bg-pastel-peach border border-pastel-peachBorder rounded-[28px] p-6 text-left shadow-soft-card transform rotate-3 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-peachTag mb-4 font-mono shadow-sm">
-          LIVE STATS
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-2">
-          端到端响应
-        </h3>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span class="text-3xl font-black text-zinc-900 tracking-tight font-mono">&lt; 1.2ms</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-mono">预热池化</span>
-        </div>
-        <p class="text-xs text-zinc-600 leading-relaxed">
-          双击物理 Alt 释放瞬发，完全无感知无白屏。
-        </p>
-      </div>
-
-      <!-- Card 3: Bottom-Left (Platform / Mint Green pastel) -->
-      <div class="kinetic-card hidden md:block absolute bottom-6 left-6 lg:left-16 w-[270px] bg-pastel-mint border border-pastel-mintBorder rounded-[28px] p-6 text-left shadow-soft-card transform rotate-2 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-mintTag mb-4 font-mono shadow-sm">
-          CLIPBOARD GUARD
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          剪贴板历史零污染
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed mb-4">
-          自动注入阻隔标志，绝不污染 Win+V 剪贴板历史。
-        </p>
-        <div class="flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs font-bold shadow-sm text-zinc-800">UIA</span>
-          <span class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs font-bold shadow-sm text-zinc-800">Hook</span>
-          <span class="text-[11px] font-mono text-zinc-500 font-medium ml-1">保护常开</span>
-        </div>
-      </div>
-
-      <!-- Handwritten note near Card 3 -->
-      <div class="hidden lg:block absolute bottom-44 left-[320px] font-hand text-zinc-400 text-lg -rotate-6 select-none pointer-events-none">
-        zero friction, clean history
-      </div>
-
-      <!-- Card 4: Bottom-Right (System / Lilac Purple pastel) -->
-      <div class="kinetic-card hidden md:block absolute bottom-4 right-6 lg:right-16 w-[265px] bg-pastel-lilac border border-pastel-lilacBorder rounded-[28px] p-6 text-left shadow-soft-card transform -rotate-2 select-none">
-        <span class="inline-block text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/70 text-pastel-lilacTag mb-4 font-mono shadow-sm">
-          DELIVERY MODES
-        </span>
-        <h3 class="font-extrabold text-lg text-zinc-900 leading-tight mb-1">
-          自洽三态交付
-        </h3>
-        <p class="text-xs text-zinc-600 leading-relaxed">
-          算术色值<strong>就地替换</strong>，长文<strong>侧边抽屉</strong>，空选区<strong>Spotlight 唤起</strong>。
-        </p>
-      </div>
-
-      <!-- Center Hero Content -->
-      <div class="max-w-xl mx-auto space-y-6 z-10 px-4">
-        
-        <!-- Big Playful Handwritten-Style Headline -->
-        <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-zinc-900 leading-[1.1]">
-          划选文字，<br>
-          <span class="font-hand text-5xl sm:text-7xl font-bold text-zinc-800 inline-block -rotate-1 mt-1">
-            你想要做什么？
-          </span>
-        </h1>
-
-        <!-- Kinetic Central Pill Command Bar -->
-        <div class="relative max-w-md mx-auto group">
-          <div class="flex items-center gap-3 bg-zinc-100/90 hover:bg-zinc-100 border border-zinc-200/80 rounded-full px-5 py-3.5 shadow-inner transition">
-            <svg class="w-5 h-5 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input type="text" id="hero-quick-input" value="1024 * 768 / 2" placeholder="输入任意文本、算式或色值..." class="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none font-medium" />
-            <span class="text-[11px] font-mono text-zinc-400 bg-white px-2 py-0.5 rounded-full border border-zinc-200 shadow-sm shrink-0">双击 Alt</span>
-          </div>
-        </div>
-
-        <!-- Start Button (Kinetic Signature Black Pill CTA) -->
-        <div class="pt-2">
-          <button onclick="triggerFromHero()" class="inline-flex items-center gap-3 px-7 py-4 rounded-full bg-zinc-900 hover:bg-black text-white font-semibold text-sm shadow-xl shadow-zinc-900/15 active:scale-95 transition">
-            <span>启动交互模拟演练</span>
-            <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">➔</span>
-          </button>
-        </div>
-
-        <!-- Physical Key Shortcut Banner -->
-        <p class="text-xs text-zinc-400 font-mono">
-          网页已挂载键盘监听：直接快速连敲两次 <kbd class="kbd-btn-light">Alt</kbd> 即可呼出卡片
-        </p>
-
-      </div>
-
-    </div>
-
-  </section>
-
-  <!-- Interactive Studio / Playground Section -->
-  <section id="playground" class="max-w-7xl mx-auto px-6 lg:px-12 py-16 border-t border-zinc-200/70">
+    <!-- Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Section Title -->
-    <div class="text-center max-w-2xl mx-auto mb-10 space-y-2">
-      <div class="inline-block px-3 py-1 rounded-full bg-pastel-blue text-pastel-blueTag text-xs font-mono font-bold">
-        STUDIO WORKBENCH
-      </div>
-      <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight">高拟真桌面交互工作台</h2>
-      <p class="text-sm text-zinc-500">
-        完全在浏览器中体验划选文字、双击 Alt 抬起与智能三态交付全流程。
-      </p>
-    </div>
+    <!-- Real QR Code Library for Mobile Relay -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
-    <!-- Playground Outer Card -->
-    <div class="bg-white rounded-[32px] p-6 lg:p-10 border border-zinc-200/80 shadow-float space-y-8">
-      
-      <!-- Top Preset Bar (Pill Selector) -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-zinc-100">
-        <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
-          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider font-mono mr-1">选择场景:</span>
-          <button onclick="applyPreset('calc')" class="preset-pill active px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white transition shrink-0">🧮 算术求值</button>
-          <button onclick="applyPreset('color')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🎨 色值互转</button>
-          <button onclick="applyPreset('cmd')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">💻 自然语言转命令</button>
-          <button onclick="applyPreset('naming')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🔤 驼峰命名</button>
-          <button onclick="applyPreset('error')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">🛠️ 报错修复</button>
-          <button onclick="applyPreset('empty')" class="preset-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition shrink-0">⚡ 空选区 (Spotlight)</button>
-        </div>
-
-        <!-- Telemetry Status Pill -->
-        <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs font-mono shrink-0">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span class="text-zinc-500">端到端时延:</span>
-          <span id="telemetry-badge" class="font-bold text-zinc-800">就绪 (待触发)</span>
-        </div>
-      </div>
-
-      <!-- Main Workbench 2-Column Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        <!-- Left: Virtual Application Workspace (7 cols) -->
-        <div class="lg:col-span-7 bg-[#F8FAFC] border border-zinc-200 rounded-[24px] overflow-hidden flex flex-col shadow-sm">
-          
-          <!-- Virtual Window Header -->
-          <div class="bg-white px-5 py-3 border-b border-zinc-200 flex items-center justify-between text-xs select-none">
-            <div class="flex items-center gap-3">
-              <!-- Traffic lights -->
-              <div class="flex items-center gap-1.5">
-                <span class="w-3 h-3 rounded-full bg-[#FF5F56] inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block"></span>
-                <span class="w-3 h-3 rounded-full bg-[#27C93F] inline-block"></span>
-              </div>
-              <!-- Window title -->
-              <span id="window-title" class="font-mono text-zinc-600 font-medium">editor.py - Visual Studio Code</span>
-            </div>
-            <span id="window-process-badge" class="font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-pastel-blue text-pastel-blueTag font-bold">code.exe</span>
-          </div>
-
-          <!-- Content Area with Line Numbers -->
-          <div class="p-5 font-mono text-xs flex flex-col min-h-[280px] bg-white relative">
-            <div class="flex items-center justify-between text-zinc-400 text-[11px] mb-3 pb-2 border-b border-zinc-100">
-              <span>划选文本区域（可直接编辑）：</span>
-              <span class="text-zinc-500 font-mono">就地替换目标</span>
-            </div>
-
-            <!-- Gutter + Textarea -->
-            <div class="flex-1 flex gap-3">
-              <div class="text-zinc-300 select-none text-right pr-2 border-r border-zinc-100 font-mono text-xs space-y-1 w-6">
-                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
-              </div>
-              <textarea id="mock-selection" rows="7" spellcheck="false" class="w-full h-full bg-transparent border-0 font-mono text-xs text-zinc-800 focus:outline-none resize-none leading-relaxed selection:bg-pastel-blue" placeholder="划选文本呈现于此..."></textarea>
-            </div>
-
-            <!-- Bottom Action CTA inside Workspace -->
-            <div class="pt-4 mt-2 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div class="text-[11px] text-zinc-400 font-mono flex items-center gap-2">
-                <span>敲击物理按键:</span>
-                <kbd class="kbd-btn-light text-[10px]">Alt</kbd> + <kbd class="kbd-btn-light text-[10px]">Alt</kbd>
-              </div>
-              <button onclick="simulateDoubleAlt()" class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition active:scale-95">
-                <span>⚡ 模拟连击两次 Alt 唤出</span>
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Right: Interactive Dynamic Card Stage (5 cols) -->
-        <div class="lg:col-span-5 flex flex-col space-y-5">
-          
-          <!-- Telemetry Breakdown Box -->
-          <div class="bg-zinc-50 border border-zinc-200/80 rounded-[20px] p-4 text-xs font-mono space-y-2">
-            <div class="flex items-center justify-between font-bold text-zinc-700 pb-1 border-b border-zinc-200/60">
-              <span class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>亚毫秒耗时剖析</span>
-              </span>
-              <span id="telemetry-timer" class="text-zinc-900">0.00 ms</span>
-            </div>
-            <div class="space-y-1.5 text-[11px] text-zinc-500">
-              <div class="flex justify-between">
-                <span>Win32 选区提取:</span>
-                <span id="lat-extract" class="text-zinc-700 font-semibold">0.0 ms</span>
-              </div>
-              <div class="flex justify-between">
-                <span>两级分桶特征打分:</span>
-                <span id="lat-score" class="text-emerald-600 font-bold">&lt; 0.1 ms</span>
-              </div>
-              <div class="flex justify-between">
-                <span>预热池卡片激活:</span>
-                <span id="lat-render" class="text-zinc-700 font-semibold">1.2 ms</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dynamic Floating Preview Area -->
-          <div class="bg-[#F8FAFC] border border-zinc-200 rounded-[24px] p-6 min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+    <style>
+        :root {
+            /* Industrial Dark Titanium Theme (Inherited from 06_Industrial Design Hub) */
+            --bg-color: #0E0D0C;
+            --surface-color: rgba(28, 26, 25, 0.6);
+            --card-bg: rgba(35, 33, 32, 0.4);
+            --accent-glow: rgba(142, 136, 132, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-active: rgba(255, 255, 255, 0.14);
             
-            <!-- State 0: Idle Prompt -->
-            <div id="idle-prompt" class="text-center space-y-3 px-4">
-              <div class="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center mx-auto text-zinc-800 shadow-sm text-lg">
-                🖱️
-              </div>
-              <div class="space-y-1">
-                <p class="text-xs font-bold text-zinc-800">卡片待唤出</p>
-                <p class="text-[11px] text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                  在左侧窗口中点击 <strong class="text-zinc-800">“模拟连击两次 Alt”</strong> 或直接在物理键盘上双击 <kbd class="kbd-btn-light text-[9px]">Alt</kbd>
-                </p>
-              </div>
-            </div>
-
-            <!-- State 1: Top-3 Floating Decision Card (Light Modern Bento Style) -->
-            <div id="smart-overlay-card" class="hidden spring-pop w-full max-w-[320px] bg-white border border-zinc-200/90 rounded-[22px] p-4 shadow-float space-y-3 z-20">
-              
-              <!-- Card Header -->
-              <div class="flex items-center justify-between pb-2 border-b border-zinc-100 text-[11px]">
-                <div class="flex items-center gap-2">
-                  <span id="card-app-tag" class="px-2 py-0.5 rounded-full font-mono font-bold text-[10px] bg-pastel-blue text-pastel-blueTag">VSCODE</span>
-                  <span id="card-snippet-preview" class="text-zinc-500 truncate max-w-[130px] font-mono text-[11px]">"1024 * 768 / 2"</span>
-                </div>
-                <span class="text-[10px] text-zinc-400 font-mono">盲按 1 / 2 / 3</span>
-              </div>
-
-              <!-- Dynamic Action Rows -->
-              <div id="action-rows-box" class="space-y-2">
-                <!-- Dynamically populated -->
-              </div>
-
-              <!-- Footer Hint -->
-              <div class="pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
-                <span>两级分桶置信度</span>
-                <span>Esc 关闭</span>
-              </div>
-            </div>
-
-            <!-- State 2: Spotlight Launcher (When Empty Selection) -->
-            <div id="spotlight-overlay-card" class="hidden spring-pop w-full max-w-[340px] bg-white border border-zinc-200/90 rounded-[22px] p-4 shadow-float space-y-3 z-20">
-              <div class="flex items-center gap-2.5 bg-zinc-50 px-3.5 py-2.5 rounded-xl border border-zinc-200">
-                <span class="text-amber-500">⚡</span>
-                <input type="text" id="spotlight-input" placeholder="输入命令或关键词搜索调度..." class="w-full bg-transparent text-xs text-zinc-800 focus:outline-none font-medium placeholder-zinc-400" />
-                <kbd class="kbd-btn-light text-[9px]">↵</kbd>
-              </div>
-              <div class="space-y-1.5 text-xs">
-                <div onclick="executeSpotlightAction('calc')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>🧮</span><span>即时浮点算术计算器</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">calc</span>
-                </div>
-                <div onclick="executeSpotlightAction('qr')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>📱</span><span>跨屏手机扫码直达</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">qr</span>
-                </div>
-                <div onclick="executeSpotlightAction('scratchpad')" class="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 text-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-200">
-                  <span class="flex items-center gap-2"><span>📌</span><span>唤出无边框置顶便笺</span></span>
-                  <span class="text-zinc-400 font-mono text-[10px]">pin</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <!-- Slide-out Drawer Panel (For QR Code, Dictionary, Markdown Details) -->
-      <div id="drawer-panel" class="hidden spring-pop bg-pastel-blue/40 border border-pastel-blueBorder rounded-[24px] p-6 shadow-sm space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-pastel-blueBorder/80">
-          <div class="flex items-center gap-2.5">
-            <span id="drawer-icon-badge" class="w-8 h-8 rounded-full bg-white text-pastel-blueTag flex items-center justify-center text-sm font-bold shadow-sm">📱</span>
-            <div>
-              <h3 id="drawer-heading" class="font-bold text-zinc-900 text-sm">侧边抽屉面板 (Category B 模式)</h3>
-              <p class="text-[11px] text-zinc-600">不打扰主窗体焦点，在屏幕侧边滑出高维信息卡</p>
-            </div>
-          </div>
-          <button onclick="closeDrawer()" class="text-zinc-500 hover:text-zinc-900 px-3 py-1 rounded-full hover:bg-white text-xs font-mono transition flex items-center gap-1.5 shadow-sm">
-            <span>关闭</span>
-            <kbd class="kbd-btn-light text-[9px]">Esc</kbd>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-          <div class="md:col-span-8 space-y-3">
-            <div id="drawer-text-body" class="bg-white p-5 rounded-2xl font-mono text-zinc-800 text-xs leading-relaxed border border-pastel-blueBorder/70 shadow-sm whitespace-pre-wrap"></div>
-            <div class="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-              <span class="text-emerald-700 font-bold">✓ 抽屉无边框滑出耗时: 1.4ms</span>
-              <button onclick="copyDrawerContent()" id="copy-btn" class="px-4 py-1.5 rounded-full bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 transition shadow-sm active:scale-95">
-                一键复制内容
-              </button>
-            </div>
-          </div>
-
-          <!-- Real Scannable High-Res QR Code Canvas -->
-          <div id="qr-container" class="md:col-span-4 flex flex-col items-center justify-center p-5 bg-white rounded-2xl border border-pastel-blueBorder/70 shadow-sm space-y-2">
-            <div class="p-2.5 bg-white rounded-xl shadow-inner border border-zinc-100">
-              <canvas id="qr-canvas" class="w-[140px] h-[140px] block"></canvas>
-            </div>
-            <span class="text-[11px] text-zinc-600 text-center font-mono font-medium">手机扫码实时接力</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-  </section>
-
-  <!-- Technical Comparison & Architectural Superiority Section -->
-  <section id="matrix" class="max-w-7xl mx-auto px-6 lg:px-12 py-16">
-    <div class="text-center max-w-2xl mx-auto mb-12 space-y-2">
-      <div class="inline-block px-3 py-1 rounded-full bg-pastel-mint text-pastel-mintTag text-xs font-mono font-bold">
-        COMPARISON MATRIX
-      </div>
-      <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight">传统划词工具 vs SmartKey-Jev</h2>
-      <p class="text-sm text-zinc-500">为什么我们坚决拒绝 20 个图标平铺？深度对比两级分桶规则的工程演进。</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-      
-      <!-- Card 1 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-blue text-pastel-blueTag flex items-center justify-center font-bold text-base mb-2">
-          ⚡
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">两级分桶极速收敛</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          传统工具无论用户选中什么，一律弹出翻译、搜索、截图等 20 个图标，认知负荷极重。SmartKey-Jev 纯内存启发式两级过滤，在按键抬起瞬间<strong>仅推荐置信度最高的前 3 个动作</strong>。
-        </p>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-mint text-pastel-mintTag flex items-center justify-center font-bold text-base mb-2">
-          🛡️
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">系统历史防污染</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          常规取词工具滥发 <kbd class="kbd-btn-light text-[10px]">Ctrl+C</kbd>，导致 Windows <kbd class="kbd-btn-light text-[10px]">Win+V</kbd> 历史充斥碎片垃圾。SmartKey-Jev 兜底合成复制时注入隔离阻隔标志，确保系统剪贴板干干净净。
-        </p>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="bg-white border border-zinc-200 rounded-[28px] p-7 shadow-soft-card space-y-3">
-        <div class="w-9 h-9 rounded-2xl bg-pastel-peach text-pastel-peachTag flex items-center justify-center font-bold text-base mb-2">
-          ⌨️
-        </div>
-        <h3 class="font-extrabold text-base text-zinc-900">键盘盲打就地替换</h3>
-        <p class="text-zinc-600 leading-relaxed">
-          无需鼠标二次瞄准移动。卡片弹出后直接盲按数字键 <kbd class="kbd-btn-light text-[10px]">1</kbd> <kbd class="kbd-btn-light text-[10px]">2</kbd> <kbd class="kbd-btn-light text-[10px]">3</kbd>，算式自动求值替换，色值自动转 RGB，流式体验一气呵成。
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="border-t border-zinc-200 py-12 text-center text-xs text-zinc-500 space-y-3 bg-white">
-    <div class="flex items-center justify-center gap-4 text-zinc-600 font-medium">
-      <a href="https://github.com/jjy0230/SmartKey-Jev" target="_blank" class="hover:text-zinc-900 transition">GitHub 仓库源码</a>
-      <span>·</span>
-      <a href="https://github.com/jjy0230/SmartKey-Jev/blob/main/LICENSE" target="_blank" class="hover:text-zinc-900 transition">MIT License</a>
-      <span>·</span>
-      <span>作者: jjy0230</span>
-    </div>
-    <p class="font-mono text-zinc-400 text-[11px]">SmartKey-Jev: Desktop Instant Intent Predictor & Dynamic Shortcut Dispatcher</p>
-  </footer>
-
-  <!-- Interactive JavaScript Engine -->
-  <script>
-    // Preset Scenarios Data
-    const SCENARIOS = {
-      calc: {
-        process: 'code.exe',
-        title: 'editor.py - Visual Studio Code',
-        text: '1024 * 768 / 2',
-        actions: [
-          { key: 1, id: 'calc_eval', title: '就地求值', subtitle: '直接替换为 393216', prob: 99.4, mode: 'A', icon: '🧮', badge: '就地替换' },
-          { key: 2, id: 'qr_relay', title: '生成二维码', subtitle: '手机扫码跨屏接力', prob: 0.4, mode: 'B', icon: '📱', badge: '抽屉模式' },
-          { key: 3, id: 'search_web', title: '网络搜索', subtitle: '浏览器搜索公式', prob: 0.2, mode: 'C', icon: '🔍', badge: '外派搜索' }
-        ]
-      },
-      color: {
-        process: 'code.exe',
-        title: 'theme.css - Visual Studio Code',
-        text: '#4A90E2',
-        actions: [
-          { key: 1, id: 'color_rgb', title: '转换 RGB 色值', subtitle: 'rgb(74, 144, 226)', prob: 98.6, mode: 'A', icon: '🎨', badge: '就地替换' },
-          { key: 2, id: 'color_hsl', title: '转换 HSL 色值', subtitle: 'hsl(212, 72%, 59%)', prob: 1.1, mode: 'A', icon: '🌈', badge: '就地替换' },
-          { key: 3, id: 'qr_relay', title: '生成色值二维码', subtitle: '手机扫码读取色卡', prob: 0.3, mode: 'B', icon: '📱', badge: '抽屉模式' }
-        ]
-      },
-      cmd: {
-        process: 'windowsterminal.exe',
-        title: 'PowerShell - Administrator',
-        text: '回退上一个commit并保留工作区修改',
-        actions: [
-          { key: 1, id: 'cmd_reset', title: '转标准 Git 命令', subtitle: 'git reset --soft HEAD~1', prob: 98.9, mode: 'A', icon: '💻', badge: '就地替换' },
-          { key: 2, id: 'search_git', title: '搜索 Git 用法', subtitle: '查询 reset 官方文档', prob: 0.8, mode: 'C', icon: '🔍', badge: '外派搜索' },
-          { key: 3, id: 'pin_note', title: '置顶为便签', subtitle: '钉在屏幕边缘常驻', prob: 0.3, mode: 'B', icon: '📌', badge: '抽屉模式' }
-        ]
-      },
-      naming: {
-        process: 'code.exe',
-        title: 'user_service.py - Visual Studio Code',
-        text: 'user_profile_data',
-        actions: [
-          { key: 1, id: 'name_camel', title: '转 camelCase', subtitle: 'userProfileData', prob: 96.8, mode: 'A', icon: '🔤', badge: '就地替换' },
-          { key: 2, id: 'name_pascal', title: '转 PascalCase', subtitle: 'UserProfileData', prob: 2.4, mode: 'A', icon: '🔤', badge: '就地替换' },
-          { key: 3, id: 'dict_lookup', title: '查词与释义', subtitle: '查询 profile 单词定义', prob: 0.8, mode: 'B', icon: '📖', badge: '抽屉模式' }
-        ]
-      },
-      error: {
-        process: 'code.exe',
-        title: 'server.py - Visual Studio Code',
-        text: 'Traceback (most recent call last):\n  File "server.py", line 42\nKeyError: \'auth_token\'',
-        actions: [
-          { key: 1, id: 'fix_stack', title: '注入防御捕获', subtitle: '就地生成 try-except 容错', prob: 99.8, mode: 'A', icon: '🛠️', badge: '就地替换' },
-          { key: 2, id: 'explain_code', title: '解释异常根因', subtitle: '字典键缺失原因排查', prob: 0.1, mode: 'B', icon: '💡', badge: '抽屉模式' },
-          { key: 3, id: 'search_web', title: '搜索堆栈方案', subtitle: '在 GitHub/SO 检索报错', prob: 0.1, mode: 'C', icon: '🔍', badge: '外派搜索' }
-        ]
-      },
-      empty: {
-        process: 'explorer.exe',
-        title: 'Windows Desktop',
-        text: '',
-        actions: []
-      }
-    };
-
-    let activeScenarioKey = 'calc';
-    let currentActions = [];
-    let isCardOpen = false;
-    let isSpotlightOpen = false;
-
-    // Physical Double Alt Detection
-    let lastAltTime = 0;
-    window.addEventListener('keydown', (e) => {
-      // Physical Alt Key
-      if (e.key === 'Alt') {
-        const now = Date.now();
-        if (now - lastAltTime < 380) {
-          e.preventDefault();
-          simulateDoubleAlt();
-          lastAltTime = 0;
-          return;
-        }
-        lastAltTime = now;
-      }
-
-      // Esc to close
-      if (e.key === 'Escape') {
-        closeAllOverlays();
-        return;
-      }
-
-      // Blind number keys: 1, 2, 3
-      if (isCardOpen && ['1', '2', '3'].includes(e.key)) {
-        e.preventDefault();
-        const actionIdx = parseInt(e.key) - 1;
-        if (currentActions[actionIdx]) {
-          triggerAction(currentActions[actionIdx]);
-        }
-      }
-
-      // Spotlight Enter key
-      if (isSpotlightOpen && e.key === 'Enter') {
-        e.preventDefault();
-        executeSpotlightAction('calc');
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      applyPreset('calc');
-    });
-
-    function applyPreset(key) {
-      activeScenarioKey = key;
-      const s = SCENARIOS[key];
-      
-      document.getElementById('mock-selection').value = s.text;
-      document.getElementById('window-process-badge').textContent = s.process;
-      document.getElementById('window-title').textContent = s.title;
-
-      // Update active preset pill styling
-      document.querySelectorAll('.preset-pill').forEach(b => {
-        b.classList.remove('bg-zinc-900', 'text-white');
-        b.classList.add('bg-zinc-100', 'text-zinc-700');
-      });
-      event?.target?.closest('button')?.classList.remove('bg-zinc-100', 'text-zinc-700');
-      event?.target?.closest('button')?.classList.add('bg-zinc-900', 'text-white');
-
-      closeAllOverlays();
-      document.getElementById('telemetry-badge').textContent = '就绪 (待触发)';
-    }
-
-    function triggerFromHero() {
-      const heroVal = document.getElementById('hero-quick-input').value.trim();
-      if (heroVal) {
-        document.getElementById('mock-selection').value = heroVal;
-      }
-      document.getElementById('playground').scrollIntoView({ behavior: 'smooth' });
-      setTimeout(() => {
-        simulateDoubleAlt();
-      }, 500);
-    }
-
-    function simulateDoubleAlt() {
-      const text = document.getElementById('mock-selection').value.trim();
-      const idlePrompt = document.getElementById('idle-prompt');
-      const overlayCard = document.getElementById('smart-overlay-card');
-      const spotlightCard = document.getElementById('spotlight-overlay-card');
-      const drawer = document.getElementById('drawer-panel');
-
-      idlePrompt.classList.add('hidden');
-      drawer.classList.add('hidden');
-
-      // Empty selection fallback to Spotlight
-      if (!text) {
-        isCardOpen = false;
-        isSpotlightOpen = true;
-        overlayCard.classList.add('hidden');
-        spotlightCard.classList.remove('hidden');
-        document.getElementById('spotlight-input').focus();
-        updateTelemetry(0.05, 0.04, 1.15);
-        return;
-      }
-
-      // Populate Top-3 Action Card
-      isCardOpen = true;
-      isSpotlightOpen = false;
-      spotlightCard.classList.add('hidden');
-      overlayCard.classList.remove('hidden');
-
-      const s = SCENARIOS[activeScenarioKey] || SCENARIOS.calc;
-      currentActions = s.actions;
-
-      document.getElementById('card-app-tag').textContent = s.process.replace('.exe', '').toUpperCase();
-      document.getElementById('card-snippet-preview').textContent = `"${text.substring(0, 18)}${text.length > 18 ? '...' : ''}"`;
-
-      const rowsBox = document.getElementById('action-rows-box');
-      rowsBox.innerHTML = '';
-
-      s.actions.forEach((act, idx) => {
-        const row = document.createElement('div');
-        row.className = 'group flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/60 hover:border-zinc-300 cursor-pointer transition active:scale-[0.98] select-none';
-        row.onclick = () => triggerAction(act);
-
-        row.innerHTML = `
-          <div class="flex items-center gap-2.5">
-            <kbd class="kbd-btn-light text-[10px] w-5 h-5 flex items-center justify-center">${act.key}</kbd>
-            <div class="text-left">
-              <div class="font-bold text-zinc-900 flex items-center gap-1.5 text-xs">
-                <span>${act.icon}</span>
-                <span>${act.title}</span>
-              </div>
-              <div class="text-[10px] text-zinc-500 font-mono">${act.subtitle}</div>
-            </div>
-          </div>
-          <div class="text-right flex flex-col items-end gap-0.5">
-            <span class="text-[9px] px-2 py-0.5 rounded-full bg-white text-zinc-600 border border-zinc-200 font-mono">${act.badge}</span>
-            <span class="font-mono text-[10px] text-emerald-600 font-bold">${act.prob}%</span>
-          </div>
-        `;
-        rowsBox.appendChild(row);
-      });
-
-      updateTelemetry(
-        (Math.random() * 2 + 5.2).toFixed(1),
-        (Math.random() * 0.05 + 0.04).toFixed(2),
-        (Math.random() * 0.5 + 1.1).toFixed(1)
-      );
-    }
-
-    function updateTelemetry(extract, score, render) {
-      document.getElementById('lat-extract').textContent = `${extract} ms`;
-      document.getElementById('lat-score').textContent = `${score} ms`;
-      document.getElementById('lat-render').textContent = `${render} ms`;
-
-      const total = (parseFloat(extract) + parseFloat(score) + parseFloat(render)).toFixed(1);
-      document.getElementById('telemetry-timer').textContent = `${total} ms`;
-      document.getElementById('telemetry-badge').textContent = `${total} ms (端到端收敛)`;
-    }
-
-    function triggerAction(act) {
-      const editor = document.getElementById('mock-selection');
-      const rawText = editor.value.trim();
-
-      if (act.mode === 'A') {
-        // In-Place Replace Mode
-        if (act.id === 'calc_eval') {
-          editor.value = '393216';
-        } else if (act.id === 'color_rgb') {
-          editor.value = 'rgb(74, 144, 226)';
-        } else if (act.id === 'color_hsl') {
-          editor.value = 'hsl(212, 72%, 59%)';
-        } else if (act.id === 'cmd_reset') {
-          editor.value = 'git reset --soft HEAD~1';
-        } else if (act.id === 'name_camel') {
-          editor.value = 'userProfileData';
-        } else if (act.id === 'name_pascal') {
-          editor.value = 'UserProfileData';
-        } else if (act.id === 'fix_stack') {
-          editor.value = `# Auto-Fixed with Guardrails\ntry:\n    auth_token = headers['auth_token']\nexcept KeyError:\n    auth_token = None`;
+            --text-primary: #DCD6D1;
+            --text-secondary: #8E8884;
+            --text-muted: #5C5855;
+            --accent-green: #4ADE80;
+            --accent-cyan: #38BDF8;
+            --accent-amber: #FBBF24;
+            
+            --radius-lg: 24px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
         }
 
-        editor.classList.add('flash-highlight');
-        setTimeout(() => editor.classList.remove('flash-highlight'), 1000);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        closeAllOverlays();
-        showFeedback(`✓ 盲按 [${act.key}] 执行成功！原选中文本已完成 <strong class="text-zinc-900">就地替换 (In-place Replace)</strong>`);
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% -20%, rgba(142, 136, 132, 0.12) 0%, transparent 55%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 80px 80px, 80px 80px;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding: 36px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
 
-      } else if (act.mode === 'B') {
-        closeAllOverlays();
-        openDrawer(act, rawText);
-      } else {
-        closeAllOverlays();
-        showFeedback(`✓ 系统外派成功！已调起默认浏览器检索: <strong class="text-zinc-900">${rawText}</strong>`);
-      }
-    }
+        /* App Shell Layout */
+        .app-shell {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
 
-    function openDrawer(act, text) {
-      const drawer = document.getElementById('drawer-panel');
-      drawer.classList.remove('hidden');
+        /* Header Navigation */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px;
+        }
 
-      document.getElementById('drawer-icon-badge').textContent = act.icon;
-      document.getElementById('drawer-heading').textContent = `${act.title} · 侧边抽屉`;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
 
-      const body = document.getElementById('drawer-text-body');
-      const qrContainer = document.getElementById('qr-container');
+        .brand-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
 
-      if (act.id === 'qr_relay') {
-        qrContainer.classList.remove('hidden');
-        body.textContent = `【跨屏接力服务】\n\n已将选中文本转换为无损高抗噪二维码。\n请使用微信、iOS 相机对准右侧二维码，即可瞬间同步至手机剪贴板：\n\n内容载荷: ${text}`;
-        renderRealQRCode(text || "https://github.com/jjy0230/SmartKey-Jev");
-      } else if (act.id === 'dict_lookup') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `### profile /ˈproʊ.faɪl/\n\n【名词】简况，画像，侧影\n• 计算机语境：User Profile (用户画像 / 配置文件)\n• 例句：The system builds a dynamic user profile to converge intent.\n• 权威来源：牛津高级英汉双解词典`;
-      } else if (act.id === 'pin_note') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `📌 [置顶便签已生成]\n\n便签内容：${text}\n状态：已固定在屏幕右下角最顶层 (WS_EX_TOPMOST)\n操作：双击便签可编辑，滚轮缩放字号。`;
-      } else if (act.id === 'explain_code') {
-        qrContainer.classList.add('hidden');
-        body.textContent = `💡 [Python 堆栈诊断建议]\n\n• 异常类型：KeyError: 'auth_token'\n• 根因分析：在未验证字典是否包含该键时直接使用下标访问\n• 最佳实践：使用 .get('auth_token', None) 避免抛出致命中断。`;
-      }
-    }
+        .brand-icon::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--bg-color);
+        }
 
-    function renderRealQRCode(text) {
-      const canvas = document.getElementById('qr-canvas');
-      if (typeof QRCode !== 'undefined') {
-        QRCode.toCanvas(canvas, text, {
-          width: 140,
-          margin: 1,
-          color: {
-            dark: '#18181B',
-            light: '#FFFFFF'
-          }
-        }, function (error) {
-          if (error) console.error(error);
+        .kernel-badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        nav {
+            display: flex;
+            background: var(--surface-color);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 4px;
+            border-radius: 40px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        nav button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: var(--font-main);
+        }
+
+        nav button:hover {
+            color: var(--text-primary);
+        }
+
+        nav button.active {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-color);
+            border: none;
+            padding: 9px 22px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(220, 214, 209, 0.15);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* 3-Column Dashboard Summary (From 06) */
+        .dashboard-summary {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-active);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-active), transparent);
+        }
+
+        .card-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-value {
+            font-size: 34px;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .card-subtext {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .progress-visual {
+            margin-top: 20px;
+            height: 36px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-sm);
+            position: relative;
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(220, 214, 209, 0.05), rgba(220, 214, 209, 0.25));
+            border-right: 1px solid var(--text-secondary);
+            width: 88%;
+            transition: width 0.4s ease;
+        }
+
+        /* Industrial Crosshairs */
+        .crosshair {
+            position: absolute;
+            width: 11px;
+            height: 11px;
+            pointer-events: none;
+        }
+
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: var(--text-muted);
+        }
+
+        .crosshair::before { top: 5px; left: 0; width: 11px; height: 1px; }
+        .crosshair::after { left: 5px; top: 0; width: 1px; height: 11px; }
+
+        /* Core Interactive Workstation */
+        .workstation-container {
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 20px;
+        }
+
+        /* Virtual Application Workspace */
+        .viewport-panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+        }
+
+        .panel-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .os-window-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .traffic-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .traffic-dots span {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .window-title {
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .process-tag {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--accent-cyan);
+        }
+
+        /* Scenario Preset Selector */
+        .scenario-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+            font-family: var(--font-mono);
+        }
+
+        .chip:hover {
+            color: var(--text-primary);
+            border-color: var(--border-active);
+        }
+
+        .chip.active {
+            background: rgba(220, 214, 209, 0.12);
+            color: var(--text-primary);
+            border-color: var(--border-active);
+        }
+
+        /* Editor Area */
+        .editor-container {
+            background: rgba(14, 13, 12, 0.85);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 250px;
+            position: relative;
+        }
+
+        .editor-label-bar {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding-bottom: 8px;
+        }
+
+        .editor-split {
+            display: flex;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .gutter {
+            color: var(--text-muted);
+            user-select: none;
+            text-align: right;
+            padding-right: 12px;
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+            line-height: 1.8;
+            font-size: 11px;
+        }
+
+        .code-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.8;
+            resize: none;
+            outline: none;
+            selection-background-color: rgba(220, 214, 209, 0.2);
+        }
+
+        .workstation-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            padding-top: 8px;
+        }
+
+        /* Right Panel: SmartKey Live Overlay & Engine Inspector */
+        .inspector-panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+        }
+
+        /* The Floating Top-3 Card */
+        .intent-overlay-box {
+            background: rgba(22, 20, 19, 0.95);
+            border: 1px solid var(--border-active);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 11px;
+            font-family: var(--font-mono);
+        }
+
+        .hotkey-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-green);
+            font-size: 10px;
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .action-row:hover, .action-row.selected {
+            background: rgba(220, 214, 209, 0.08);
+            border-color: var(--border-active);
+            transform: translateX(2px);
+        }
+
+        .action-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .keycap {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+        }
+
+        .action-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .action-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .action-desc {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .action-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .action-prob {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .delivery-badge {
+            font-size: 9px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        /* Two-Tier Inspection Specs */
+        .engine-telemetry {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(14, 13, 12, 0.5);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .telemetry-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-family: var(--font-mono);
+        }
+
+        .telemetry-label {
+            color: var(--text-secondary);
+        }
+
+        .telemetry-val {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Reporting Hub / Macro Dispatcher Table (Directly from 06) */
+        .reporting-section {
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 12px;
+            position: relative;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px 16px 24px;
+        }
+
+        .table-header h2 {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th {
+            text-align: left;
+            padding: 14px 24px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            font-size: 11px;
+            border: 1px solid var(--border-subtle);
+            font-family: var(--font-mono);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .tech-specs {
+            display: flex;
+            gap: 18px;
+        }
+
+        .spec-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .spec-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .spec-value {
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .budget-bar-container {
+            width: 90px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .budget-bar {
+            height: 100%;
+            background: var(--text-secondary);
+            border-radius: 2px;
+        }
+
+        /* Slide-out Drawer Panel (Category B Mode) */
+        .drawer {
+            position: fixed;
+            top: 36px;
+            bottom: 36px;
+            right: 40px;
+            width: 380px;
+            background: rgba(20, 18, 17, 0.96);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border-active);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 999;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+            transform: translateX(450px);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer.active {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .drawer-title {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+        }
+
+        .close-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.15s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-active);
+        }
+
+        .drawer-body {
+            flex: 1;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .qr-canvas-box {
+            padding: 14px;
+            background: #FFFFFF;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .drawer-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            line-height: 1.6;
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            width: 100%;
+            text-align: left;
+            word-break: break-all;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Success replacement flash */
+        @keyframes flashEffect {
+            0% { background: rgba(74, 222, 128, 0.25); }
+            100% { background: transparent; }
+        }
+        .flash-active {
+            animation: flashEffect 0.8s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+
+        <!-- Top Header Navigation -->
+        <header>
+            <div class="brand">
+                <div class="brand-icon"></div>
+                <span>SmartKey.OS</span>
+                <span class="kernel-badge">Jev Kernel v0.2.0</span>
+            </div>
+
+            <nav>
+                <button class="active" onclick="switchView('overview')">Overview</button>
+                <button onclick="switchView('engine')">Two-Tier Rules</button>
+                <button onclick="switchView('macros')">Macro Catalog</button>
+                <button onclick="switchView('telemetry')">Telemetry HUD</button>
+            </nav>
+
+            <div class="user-actions">
+                <button class="btn-primary" onclick="simulateDoubleAlt()">
+                    <span style="font-size: 14px;">⚡</span>
+                    <span>模拟物理双击 Alt</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 3-Column Performance & Telemetry HUD -->
+        <section class="dashboard-summary">
+            <!-- Metric Card 1 -->
+            <div class="card">
+                <span class="card-label">
+                    <span>Active Intent Throughput</span>
+                    <span style="font-family: var(--font-mono); color: var(--accent-green);">99.4% Converged</span>
+                </span>
+                <div class="card-value">
+                    <span>&lt; 0.08</span>
+                    <span style="font-size: 16px; color: var(--text-secondary);">ms</span>
+                </div>
+                <div class="card-subtext">Across 6+ core desktop process profiles (IDE, Shell, Browser, Chat)</div>
+                <div class="progress-visual">
+                    <span style="position: relative; z-index: 1;">Two-Tier Heuristic Bucketing Active</span>
+                    <span style="position: relative; z-index: 1; color: var(--text-primary); font-weight: 600;">0.08ms</span>
+                    <div class="progress-bar" style="width: 92%;"></div>
+                </div>
+                <div class="crosshair" style="top: 20px; right: 20px;"></div>
+            </div>
+
+            <!-- Metric Card 2 -->
+            <div class="card">
+                <span class="card-label">End-to-End Latency</span>
+                <div class="card-value">
+                    <span>1.18</span>
+                    <span style="font-size: 16px; color: var(--text-secondary);">ms</span>
+                </div>
+                <div class="card-subtext">Pre-warmed transparent pool. No freeze, zero white flash.</div>
+                <div class="crosshair" style="bottom: 20px; left: 20px;"></div>
+            </div>
+
+            <!-- Metric Card 3 -->
+            <div class="card">
+                <span class="card-label">Clipboard Isolation</span>
+                <div class="card-value" style="color: var(--accent-green);">
+                    <span>0</span>
+                    <span style="font-size: 16px; color: var(--text-secondary);">Pollution</span>
+                </div>
+                <div class="card-subtext">CanIncludeInClipboardHistory=0 injected to protect Win+V history.</div>
+                <div class="crosshair" style="bottom: 20px; right: 20px;"></div>
+            </div>
+        </section>
+
+        <!-- Main Interactive Workstation -->
+        <section class="workstation-container" id="workstation">
+            
+            <!-- Left: Virtual Windows Desktop Window -->
+            <div class="viewport-panel">
+                <div class="panel-top-row">
+                    <div class="os-window-header">
+                        <div class="traffic-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="window-title" id="active-window-title">server.py - Visual Studio Code</span>
+                    </div>
+                    <span class="process-tag" id="active-process-tag">code.exe</span>
+                </div>
+
+                <!-- Scenario Selector Chips -->
+                <div class="scenario-chips">
+                    <div class="chip active" onclick="loadScenario('calc')">🧮 算术求值</div>
+                    <div class="chip" onclick="loadScenario('color')">🎨 颜色转换</div>
+                    <div class="chip" onclick="loadScenario('cmd')">💻 自然语言转命令</div>
+                    <div class="chip" onclick="loadScenario('naming')">🔤 变量命名</div>
+                    <div class="chip" onclick="loadScenario('error')">🛠️ 报错诊断</div>
+                    <div class="chip" onclick="loadScenario('empty')">⚡ 空选区 (Spotlight)</div>
+                </div>
+
+                <!-- Code Editor Viewport -->
+                <div class="editor-container" id="editor-viewport">
+                    <div class="editor-label-bar">
+                        <span>Simulated Caret Selection (Editable Text)</span>
+                        <span id="delivery-mode-tag">Target: In-Place Replace</span>
+                    </div>
+                    <div class="editor-split">
+                        <div class="gutter">
+                            <div>01</div><div>02</div><div>03</div><div>04</div><div>05</div>
+                        </div>
+                        <textarea class="code-textarea" id="simulated-selection" rows="6" spellcheck="false">1024 * 768 / 2</textarea>
+                    </div>
+                </div>
+
+                <div class="workstation-footer">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>物理键盘操作:</span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">Alt</span>
+                        <span>+</span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">Alt</span>
+                        <span>连击</span>
+                    </div>
+                    <span>按键盲打 1 / 2 / 3 瞬发执行</span>
+                </div>
+                <div class="crosshair" style="top: 16px; right: 16px;"></div>
+            </div>
+
+            <!-- Right: SmartKey Decision Overlay & Latency HUD -->
+            <div class="inspector-panel">
+                <div class="intent-overlay-box" id="intent-overlay-box">
+                    <div class="overlay-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="process-tag" id="overlay-process-badge">CODE.EXE</span>
+                            <span style="color: var(--text-secondary);" id="overlay-snippet">"1024 * 768 / 2"</span>
+                        </div>
+                        <div class="hotkey-indicator">
+                            <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--accent-green);"></span>
+                            <span>盲按 1/2/3</span>
+                        </div>
+                    </div>
+
+                    <div class="action-list" id="action-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Two-Tier Engine Inspector -->
+                <div class="engine-telemetry">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 4px;">
+                        Two-Tier Heuristic Breakdown
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">1. Tier-1 Process Masking:</span>
+                        <span class="telemetry-val" id="t1-val">IDE Context (Filtered 12 ➔ 6)</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">2. Tier-2 Feature Convergence:</span>
+                        <span class="telemetry-val" style="color: var(--accent-green);" id="t2-val">Math AST Token (0.06ms)</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">3. Win32 Card Activation:</span>
+                        <span class="telemetry-val" id="t3-val">1.12ms (Pre-warmed Pool)</span>
+                    </div>
+                </div>
+
+                <div class="crosshair" style="bottom: 16px; right: 16px;"></div>
+            </div>
+
+        </section>
+
+        <!-- Macro Dispatcher Matrix Table (Foundry.OS Table Style) -->
+        <section class="reporting-section" id="macro-table-section">
+            <div class="table-header">
+                <h2>
+                    <span>Macro Dispatcher Catalog</span>
+                    <span class="kernel-badge">12 Active Units</span>
+                </h2>
+                <div style="display: flex; gap: 8px;">
+                    <span class="status-pill">
+                        <span class="status-dot"></span>
+                        <span>Dispatcher Daemon Active</span>
+                    </span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Macro Entity</th>
+                        <th>Trigger Heuristic</th>
+                        <th>Delivery Spec</th>
+                        <th>Mean Latency</th>
+                        <th>Isolation Guard</th>
+                    </tr>
+                </thead>
+                <tbody id="macro-tbody">
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500; font-family: var(--font-mono);">calculate_eval</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">四则运算与浮点算式就地求值</div>
+                        </td>
+                        <td>
+                            <span class="status-pill">Regex &amp; Math AST</span>
+                        </td>
+                        <td>
+                            <div class="tech-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Mode</span>
+                                    <span class="spec-value" style="color: var(--accent-green);">In-Place</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="spec-value font-mono">0.06 ms</div>
+                            <div class="budget-bar-container"><div class="budget-bar" style="width: 15%;"></div></div>
+                        </td>
+                        <td><span style="color: var(--accent-green); font-family: var(--font-mono);">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500; font-family: var(--font-mono);">color_converter</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">HEX / RGB / HSL 色值无损互转</div>
+                        </td>
+                        <td>
+                            <span class="status-pill">Hex Color Pattern</span>
+                        </td>
+                        <td>
+                            <div class="tech-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Mode</span>
+                                    <span class="spec-value" style="color: var(--accent-green);">In-Place</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="spec-value font-mono">0.04 ms</div>
+                            <div class="budget-bar-container"><div class="budget-bar" style="width: 10%;"></div></div>
+                        </td>
+                        <td><span style="color: var(--accent-green); font-family: var(--font-mono);">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500; font-family: var(--font-mono);">make_qrcode</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">选区内容无损编码，手机扫码跨屏接力</div>
+                        </td>
+                        <td>
+                            <span class="status-pill">URL / Plain Text</span>
+                        </td>
+                        <td>
+                            <div class="tech-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Mode</span>
+                                    <span class="spec-value" style="color: var(--accent-cyan);">Drawer</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="spec-value font-mono">1.40 ms</div>
+                            <div class="budget-bar-container"><div class="budget-bar" style="width: 50%;"></div></div>
+                        </td>
+                        <td><span style="color: var(--accent-green); font-family: var(--font-mono);">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500; font-family: var(--font-mono);">nlp_to_cmd</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">自然语言操作意图映射标准 Git/Shell 指令</div>
+                        </td>
+                        <td>
+                            <span class="status-pill">Terminal / Shell Context</span>
+                        </td>
+                        <td>
+                            <div class="tech-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Mode</span>
+                                    <span class="spec-value" style="color: var(--accent-green);">In-Place</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="spec-value font-mono">0.09 ms</div>
+                            <div class="budget-bar-container"><div class="budget-bar" style="width: 20%;"></div></div>
+                        </td>
+                        <td><span style="color: var(--accent-green); font-family: var(--font-mono);">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500; font-family: var(--font-mono);">error_guard</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">Python 堆栈与异常追踪注入防御封装</div>
+                        </td>
+                        <td>
+                            <span class="status-pill">Traceback / Exception</span>
+                        </td>
+                        <td>
+                            <div class="tech-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Mode</span>
+                                    <span class="spec-value" style="color: var(--accent-green);">In-Place</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="spec-value font-mono">0.12 ms</div>
+                            <div class="budget-bar-container"><div class="budget-bar" style="width: 25%;"></div></div>
+                        </td>
+                        <td><span style="color: var(--accent-green); font-family: var(--font-mono);">Active</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Slide-out Drawer Panel (Category B Mode) -->
+        <div class="drawer" id="slide-drawer">
+            <div class="drawer-header">
+                <div class="drawer-title" id="drawer-title">📱 手机跨屏接力</div>
+                <button class="close-btn" onclick="closeDrawer()">✕</button>
+            </div>
+
+            <div class="drawer-body">
+                <div class="qr-canvas-box">
+                    <canvas id="qr-canvas" width="160" height="160"></canvas>
+                </div>
+                <div class="drawer-text" id="drawer-text">手机对准屏幕扫码，即可将选中文本瞬间同步至移动端剪贴板。</div>
+            </div>
+
+            <button class="btn-primary" style="justify-content: center; width: 100%; border-radius: var(--radius-sm);" onclick="copyDrawerContent()" id="copy-btn">
+                一键复制结果
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Interactive Script -->
+    <script>
+        const SCENARIOS = {
+            calc: {
+                app: 'code.exe',
+                title: 'server.py - Visual Studio Code',
+                text: '1024 * 768 / 2',
+                t1: 'IDE Context (Pool: 12 ➔ 6)',
+                t2: 'Math AST Token (0.06ms)',
+                modeTag: 'Target: In-Place Replace',
+                actions: [
+                    { key: 1, title: '就地求值', desc: '替换为 393216', prob: '99.4%', mode: 'A', res: '393216' },
+                    { key: 2, title: '生成二维码', desc: '手机扫码跨屏接力', prob: '0.4%', mode: 'B', res: '1024 * 768 / 2' },
+                    { key: 3, title: '网络搜索', desc: '检索公式用法', prob: '0.2%', mode: 'C', res: 'https://www.google.com/search?q=1024*768/2' }
+                ]
+            },
+            color: {
+                app: 'code.exe',
+                title: 'theme.css - Visual Studio Code',
+                text: '#4A90E2',
+                t1: 'IDE / Stylesheet Context',
+                t2: 'HEX Color Match (0.04ms)',
+                modeTag: 'Target: In-Place Replace',
+                actions: [
+                    { key: 1, title: '转 RGB 色值', desc: 'rgb(74, 144, 226)', prob: '98.6%', mode: 'A', res: 'rgb(74, 144, 226)' },
+                    { key: 2, title: '转 HSL 色值', desc: 'hsl(212, 72%, 59%)', prob: '1.1%', mode: 'A', res: 'hsl(212, 72%, 59%)' },
+                    { key: 3, title: '色卡扫码', desc: '手机读取调色板', prob: '0.3%', mode: 'B', res: '#4A90E2' }
+                ]
+            },
+            cmd: {
+                app: 'windowsterminal.exe',
+                title: 'PowerShell - Administrator',
+                text: '回退上一个commit并保留修改',
+                t1: 'Terminal / Shell Context',
+                t2: 'Git Reset Heuristic (0.09ms)',
+                modeTag: 'Target: In-Place Replace',
+                actions: [
+                    { key: 1, title: '转标准 Git 命令', desc: 'git reset --soft HEAD~1', prob: '98.9%', mode: 'A', res: 'git reset --soft HEAD~1' },
+                    { key: 2, title: '查询 Git 文档', desc: '搜索 reset 详细参数', prob: '0.8%', mode: 'C', res: 'https://git-scm.com/docs/git-reset' },
+                    { key: 3, title: '手机备忘', desc: '扫码存入便笺', prob: '0.3%', mode: 'B', res: 'git reset --soft HEAD~1' }
+                ]
+            },
+            naming: {
+                app: 'code.exe',
+                title: 'user_service.py - Visual Studio Code',
+                text: 'user_profile_data',
+                t1: 'IDE / Python Context',
+                t2: 'Snake_case Tokenizer (0.05ms)',
+                modeTag: 'Target: In-Place Replace',
+                actions: [
+                    { key: 1, title: '转 camelCase', desc: 'userProfileData', prob: '96.8%', mode: 'A', res: 'userProfileData' },
+                    { key: 2, title: '转 PascalCase', desc: 'UserProfileData', prob: '2.4%', mode: 'A', res: 'UserProfileData' },
+                    { key: 3, title: '查词与释义', desc: '查询 profile 单词定义', prob: '0.8%', mode: 'B', res: 'profile: 个人画像/配置文件' }
+                ]
+            },
+            error: {
+                app: 'code.exe',
+                title: 'server.py - Visual Studio Code',
+                text: 'KeyError: \'auth_token\'',
+                t1: 'IDE / Debugging Context',
+                t2: 'Python Exception Match (0.12ms)',
+                modeTag: 'Target: In-Place Replace',
+                actions: [
+                    { key: 1, title: '注入防御捕获', desc: 'try-except 封装', prob: '99.8%', mode: 'A', res: 'try:\n    auth = data.get(\'auth_token\')\nexcept KeyError:\n    auth = None' },
+                    { key: 2, title: '搜索报错堆栈', desc: '在 StackOverflow 检索', prob: '0.1%', mode: 'C', res: 'https://stackoverflow.com/search?q=KeyError:auth_token' },
+                    { key: 3, title: '扫码发送', desc: '手机发送至排障群', prob: '0.1%', mode: 'B', res: 'KeyError: auth_token' }
+                ]
+            },
+            empty: {
+                app: 'explorer.exe',
+                title: 'Windows Desktop',
+                text: '',
+                t1: 'Desktop Context (Empty Selection)',
+                t2: 'Spotlight Fallback Triggered',
+                modeTag: 'Target: Spotlight Launcher',
+                actions: [
+                    { key: 1, title: '呼出浮点计算器', desc: 'calc launcher', prob: '45.0%', mode: 'A', res: '1024 * 768 / 2' },
+                    { key: 2, title: '跨屏扫码直达', desc: 'qr mobile relay', prob: '35.0%', mode: 'B', res: 'https://github.com/jjy0230/SmartKey-Jev' },
+                    { key: 3, title: '唤出置顶便笺', desc: 'pin scratchpad', prob: '20.0%', mode: 'B', res: 'SmartKey 灵感备忘录' }
+                ]
+            }
+        };
+
+        let currentScenarioKey = 'calc';
+        let isCardActive = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadScenario('calc');
         });
-      }
-    }
 
-    function closeDrawer() {
-      document.getElementById('drawer-panel').classList.add('hidden');
-      document.getElementById('idle-prompt').classList.remove('hidden');
-    }
+        function loadScenario(key) {
+            currentScenarioKey = key;
+            const s = SCENARIOS[key];
+            
+            document.getElementById('active-window-title').textContent = s.title;
+            document.getElementById('active-process-tag').textContent = s.app;
+            document.getElementById('simulated-selection').value = s.text;
+            document.getElementById('delivery-mode-tag').textContent = s.modeTag;
 
-    function closeAllOverlays() {
-      isCardOpen = false;
-      isSpotlightOpen = false;
-      document.getElementById('smart-overlay-card').classList.add('hidden');
-      document.getElementById('spotlight-overlay-card').classList.add('hidden');
-    }
+            document.getElementById('overlay-process-badge').textContent = s.app.toUpperCase();
+            document.getElementById('overlay-snippet').textContent = s.text ? `"${s.text.substring(0, 16)}"` : '"(空选区)"';
 
-    function executeSpotlightAction(type) {
-      closeAllOverlays();
-      if (type === 'calc') {
-        applyPreset('calc');
-        simulateDoubleAlt();
-      } else if (type === 'qr') {
-        openDrawer({ id: 'qr_relay', icon: '📱', title: '手机扫码跨屏接力' }, "https://github.com/jjy0230/SmartKey-Jev");
-      } else if (type === 'scratchpad') {
-        openDrawer({ id: 'pin_note', icon: '📌', title: '便签卡片' }, "SmartKey 快速灵感备忘录");
-      }
-    }
+            document.getElementById('t1-val').textContent = s.t1;
+            document.getElementById('t2-val').textContent = s.t2;
 
-    function showFeedback(htmlMessage) {
-      const prompt = document.getElementById('idle-prompt');
-      prompt.innerHTML = `
-        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-2 font-bold shadow-sm">✓</div>
-        <p class="text-xs text-zinc-700 leading-relaxed">${htmlMessage}</p>
-        <button onclick="document.getElementById('idle-prompt').innerHTML = defaultIdleHtml;" class="text-[10px] text-zinc-400 hover:text-zinc-600 font-mono mt-2 underline">重置状态</button>
-      `;
-      prompt.classList.remove('hidden');
-    }
+            // Update chip active states
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            event?.target?.classList?.add('active');
 
-    const defaultIdleHtml = `
-      <div class="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center mx-auto text-zinc-800 shadow-sm text-lg">
-        🖱️
-      </div>
-      <div class="space-y-1">
-        <p class="text-xs font-bold text-zinc-800">卡片待唤出</p>
-        <p class="text-[11px] text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-          在左侧窗口中点击 <strong class="text-zinc-800">“模拟连击两次 Alt”</strong> 或直接在物理键盘上双击 <kbd class="kbd-btn-light text-[9px]">Alt</kbd>
-        </p>
-      </div>
-    `;
+            renderOverlayActions(s.actions);
+        }
 
-    function copyDrawerContent() {
-      const text = document.getElementById('drawer-text-body').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = document.getElementById('copy-btn');
-        btn.textContent = '✓ 已复制到剪贴板';
-        btn.classList.add('text-emerald-700');
-        setTimeout(() => {
-          btn.textContent = '一键复制内容';
-          btn.classList.remove('text-emerald-700');
-        }, 2000);
-      });
-    }
-  </script>
+        function renderOverlayActions(actions) {
+            const list = document.getElementById('action-list');
+            list.innerHTML = '';
+
+            actions.forEach(act => {
+                const row = document.createElement('div');
+                row.className = 'action-row';
+                row.onclick = () => executeAction(act);
+
+                row.innerHTML = `
+                    <div class="action-left">
+                        <div class="keycap">${act.key}</div>
+                        <div class="action-info">
+                            <span class="action-name">${act.title}</span>
+                            <span class="action-desc">${act.desc}</span>
+                        </div>
+                    </div>
+                    <div class="action-meta">
+                        <span class="action-prob">${act.prob}</span>
+                        <span class="delivery-badge">${act.mode === 'A' ? 'In-Place' : (act.mode === 'B' ? 'Drawer' : 'Outsource')}</span>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function executeAction(act) {
+            const textarea = document.getElementById('simulated-selection');
+            if (act.mode === 'A') {
+                textarea.value = act.res;
+                textarea.classList.add('flash-active');
+                setTimeout(() => textarea.classList.remove('flash-active'), 800);
+            } else if (act.mode === 'B') {
+                openDrawer(act);
+            } else {
+                window.open(act.res, '_blank');
+            }
+        }
+
+        function simulateDoubleAlt() {
+            const box = document.getElementById('intent-overlay-box');
+            box.style.transform = 'scale(1.02)';
+            setTimeout(() => box.style.transform = 'none', 150);
+            loadScenario(currentScenarioKey);
+        }
+
+        function openDrawer(act) {
+            const drawer = document.getElementById('slide-drawer');
+            drawer.classList.add('active');
+            document.getElementById('drawer-title').textContent = act.title;
+            document.getElementById('drawer-text').textContent = `载荷: ${act.res}`;
+
+            const canvas = document.getElementById('qr-canvas');
+            if (typeof QRCode !== 'undefined') {
+                QRCode.toCanvas(canvas, act.res, {
+                    width: 160,
+                    margin: 1,
+                    color: { dark: '#0E0D0C', light: '#FFFFFF' }
+                });
+            }
+        }
+
+        function closeDrawer() {
+            document.getElementById('slide-drawer').classList.remove('active');
+        }
+
+        function copyDrawerContent() {
+            const txt = document.getElementById('drawer-text').textContent;
+            navigator.clipboard.writeText(txt).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✓ 已复制到剪贴板';
+                setTimeout(() => btn.textContent = '一键复制结果', 2000);
+            });
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            event?.target?.classList.add('active');
+
+            if (view === 'overview' || view === 'engine') {
+                document.getElementById('workstation').scrollIntoView({ behavior: 'smooth' });
+            } else if (view === 'macros') {
+                document.getElementById('macro-table-section').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Global Physical Keyboard Hooks
+        let lastAlt = 0;
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Alt') {
+                const now = Date.now();
+                if (now - lastAlt < 350) {
+                    e.preventDefault();
+                    simulateDoubleAlt();
+                    lastAlt = 0;
+                    return;
+                }
+                lastAlt = now;
+            }
+
+            if (e.key === 'Escape') {
+                closeDrawer();
+            }
+
+            if (['1', '2', '3'].includes(e.key)) {
+                const s = SCENARIOS[currentScenarioKey];
+                const idx = parseInt(e.key) - 1;
+                if (s && s.actions[idx]) {
+                    e.preventDefault();
+                    executeAction(s.actions[idx]);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
