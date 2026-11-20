@@ -66,22 +66,22 @@ PROCESS_MAPPING: Dict[str, str] = {
 # Tier-1 Candidate Bucketing (Filter 12 -> 6~8 macros based on process archetype)
 ARCHETYPE_PREFERRED_MACROS: Dict[str, List[str]] = {
     ProcessArchetype.IDE: [
-        "fix_code", "explain_code", "format_json", "regex_test", "search_web", "translate", "terminal_cmd"
+        "fix_code", "explain_code", "format_json", "convert_case", "calculate", "open_path", "regex_test", "search_web", "translate", "terminal_cmd"
     ],
     ProcessArchetype.BROWSER: [
-        "translate", "summarize", "search_web", "open_url", "dictionary", "create_todo", "polish_text"
+        "translate", "summarize", "search_web", "open_url", "dictionary", "calculate", "open_path", "create_todo", "polish_text"
     ],
     ProcessArchetype.CHAT: [
-        "polish_text", "translate", "create_todo", "summarize", "search_web", "dictionary"
+        "polish_text", "translate", "calculate", "create_todo", "summarize", "search_web", "dictionary"
     ],
     ProcessArchetype.OFFICE: [
-        "polish_text", "summarize", "translate", "dictionary", "create_todo", "search_web"
+        "calculate", "polish_text", "summarize", "translate", "dictionary", "create_todo", "search_web"
     ],
     ProcessArchetype.TERMINAL: [
-        "terminal_cmd", "fix_code", "explain_code", "search_web", "translate", "format_json"
+        "terminal_cmd", "open_path", "calculate", "fix_code", "explain_code", "search_web", "translate", "format_json"
     ],
     ProcessArchetype.GENERAL: [
-        "search_web", "translate", "summarize", "open_url", "dictionary", "create_todo", "polish_text"
+        "calculate", "open_path", "search_web", "translate", "summarize", "open_url", "dictionary", "create_todo", "polish_text"
     ],
 }
 
@@ -108,6 +108,9 @@ class TwoTierRulePredictor(BaseIntentPredictor):
         re.IGNORECASE
     )
     REGEX_SNIPPET_PATTERN = re.compile(r"(\^|\$|\\[dswb]|\[[a-zA-Z0-9\^]+\]|\(\?[:=!]|[\*\+\?]\?)")
+    MATH_PATTERN = re.compile(r"^[\d\.\s\+\-\*\/\(\)\%\^\=]+$")
+    PATH_PATTERN = re.compile(r"^([a-zA-Z]:[\\/]|/|~[\\/]|[a-zA-Z0-9_\-\.]+[\\/])[^\<\>\:\"\|\\?\*]+$")
+    CASE_PATTERN = re.compile(r'^[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+$|^[a-z]+([A-Z][a-z0-9]+)+$')
 
     def __init__(self):
         super().__init__()
@@ -148,6 +151,14 @@ class TwoTierRulePredictor(BaseIntentPredictor):
         base_logit = 1.0
         reason = "Context affinity"
 
+        # 0. Math Arithmetic Expression pattern (e.g. "1024 * 768", "(120 + 35) / 5")
+        if self.MATH_PATTERN.match(stripped) and any(op in stripped for op in "+-*/%^") and any(c.isdigit() for c in stripped) and length < 50:
+            if macro_id == "calculate":
+                return 17.0, "Math arithmetic expression detected"
+            elif macro_id == "search_web":
+                return 4.0, "Math search"
+            return 0.1, "Non-math action suppressed"
+
         # 1. URL pattern
         if self.URL_PATTERN.match(stripped):
             if macro_id == "open_url":
@@ -155,6 +166,20 @@ class TwoTierRulePredictor(BaseIntentPredictor):
             elif macro_id == "search_web":
                 return 4.0, "URL query"
             return 0.1, "Non-URL action suppressed"
+
+        # 0.1 Local File / Directory Path pattern (excluding web URLs)
+        if not stripped.startswith("http://") and not stripped.startswith("https://") and (self.PATH_PATTERN.match(stripped) or ":\\" in stripped or (":/" in stripped and len(stripped) > 3 and stripped[1] == ':')) and length < 260 and not any(c in stripped for c in '<>"|?*'):
+            if macro_id == "open_path":
+                return 16.0, "Local file or directory path detected"
+            elif macro_id == "terminal_cmd":
+                return 6.0, "Path for terminal"
+
+        # 0.2 Variable Identifier Case pattern (e.g. "user_profile_id", "getUserInfo")
+        if self.CASE_PATTERN.match(stripped) and not any(c in stripped for c in " \t\n\r/\\{}[]();:"):
+            if macro_id == "convert_case":
+                return 16.0, "Variable naming identifier detected"
+            elif macro_id in ("explain_code", "fix_code"):
+                return 4.0, "Code token analysis"
 
         # 2. JSON / Key-Value detection (Fast heuristic + parser probe)
         is_json = False

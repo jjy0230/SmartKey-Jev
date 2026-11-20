@@ -67,6 +67,24 @@ PRESET_MACROS: List[MacroAction] = [
         default_shortcut="1",
     ),
     MacroAction(
+        id="calculate",
+        title="即时计算",
+        icon="🧮",
+        category=MacroCategory.UTILITY,
+        description="计算选中的数学表达式并将算式就地替换为计算结果",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="1",
+    ),
+    MacroAction(
+        id="convert_case",
+        title="命名转换",
+        icon="🔤",
+        category=MacroCategory.CODE,
+        description="在 camelCase、snake_case、PascalCase 间快速切换",
+        delivery_mode=MacroDeliveryMode.IN_PLACE_REPLACE,
+        default_shortcut="2",
+    ),
+    MacroAction(
         id="polish_text",
         title="润色修辞",
         icon="✨",
@@ -86,6 +104,15 @@ PRESET_MACROS: List[MacroAction] = [
     ),
 
     # ── C 类: 外部系统外派 ──────────────────────────────────────────
+    MacroAction(
+        id="open_path",
+        title="打开路径",
+        icon="📂",
+        category=MacroCategory.UTILITY,
+        description="在 Windows 资源管理器中快速打开并定位选中的文件或目录",
+        delivery_mode=MacroDeliveryMode.EXTERNAL_DISPATCH,
+        default_shortcut="1",
+    ),
     MacroAction(
         id="open_url",
         title="打开链接",

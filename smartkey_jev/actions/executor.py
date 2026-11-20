@@ -88,7 +88,44 @@ class ActionExecutor:
                 except Exception as e:
                     return {"status": "error", "message": f"Invalid JSON syntax: {e}"}
 
-        elif action.id == "polish_text":
+        elif action.id == "calculate":
+            # Safe math evaluation using python ast/math
+            expr = raw_text.strip()
+            try:
+                # Remove dangerous keywords and only allow standard math tokens
+                clean_expr = expr.replace("^", "**").replace("×", "*").replace("÷", "/")
+                # Allow hex like 0x1A or bin 0b101
+                if re.match(r'^[\d\.\s\+\-\*\/\(\)\%\*\*\&\|\^\~xXa-fA-Fbo]+$', clean_expr):
+                    # Evaluate in restricted environment
+                    result = eval(clean_expr, {"__builtins__": None}, {})
+                    # Format float if integer-like
+                    if isinstance(result, float) and result.is_integer():
+                        replacement_text = str(int(result))
+                    else:
+                        replacement_text = f"{result:.4g}" if isinstance(result, float) else str(result)
+            except Exception as e:
+                return {"status": "error", "message": f"Calc error: {e}"}
+
+        elif action.id == "convert_case":
+            token = raw_text.strip()
+            # Split words by underscores, hyphens, or camelCase boundaries
+            words = re.sub(r'([A-Z][a-z]+)', r' \1', re.sub(r'([A-Z]+)', r' \1', token)).split()
+            words = [w.lower() for w in re.split(r'[_ \-]+', " ".join(words)) if w]
+            if words:
+                if "_" in token:
+                    # snake_case -> camelCase
+                    replacement_text = words[0] + "".join(w.capitalize() for w in words[1:])
+                elif any(c.isupper() for c in token) and token[0].islower():
+                    # camelCase -> PascalCase
+                    replacement_text = "".join(w.capitalize() for w in words)
+                elif any(c.isupper() for c in token) and token[0].isupper():
+                    # PascalCase -> UPPER_SNAKE
+                    replacement_text = "_".join(w.upper() for w in words)
+                else:
+                    # fallback -> snake_case
+                    replacement_text = "_".join(words)
+            else:
+                replacement_text = token
             # Pangu spacing (insert spaces between CJK and alphanumeric)
             p1 = re.sub(r'([\u4e00-\u9fa5])([a-zA-Z0-9])', r'\1 \2', raw_text)
             p2 = re.sub(r'([a-zA-Z0-9])([\u4e00-\u9fa5])', r'\1 \2', p1)
@@ -217,6 +254,20 @@ class ActionExecutor:
 
     def _handle_external_dispatch(self, action: MacroAction, ctx: SelectionContext) -> Dict[str, Any]:
         text = (ctx.raw_text or ctx.text).strip()
+
+        if action.id == "open_path":
+            import os
+            clean_path = os.path.expanduser(text.strip('\'" \t\n\r'))
+            if os.path.exists(clean_path):
+                if os.path.isfile(clean_path):
+                    # Open Explorer and select the specific file
+                    import subprocess
+                    subprocess.Popen(f'explorer /select,"{os.path.abspath(clean_path)}"')
+                else:
+                    os.startfile(os.path.abspath(clean_path))
+                return {"status": "success", "mode": "external_dispatch", "path": clean_path}
+            else:
+                return {"status": "error", "message": f"Path not found: {clean_path}"}
 
         if action.id == "open_url":
             url = text
