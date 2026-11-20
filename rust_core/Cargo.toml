@@ -1,0 +1,21 @@
+[package]
+name = "smartkey-jev-core"
+version = "0.2.0"
+edition = "2021"
+authors = ["jjy0230"]
+description = "High-performance Rust native engine for SmartKey-Jev"
+
+[dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_Threading",
+    "Win32_System_ProcessStatus",
+    "Win32_System_DataExchange",
+    "Win32_Graphics_Gdi",
+] }
+arboard = "3.4"
+regex = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

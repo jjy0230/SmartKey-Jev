@@ -94,6 +94,20 @@ def get_monitor_work_area(x: int, y: int) -> Tuple[int, int, int, int]:
     return 0, 0, screen_w, screen_h
 
 
+class GUITHREADINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("hwndActive", wintypes.HWND),
+        ("hwndFocus", wintypes.HWND),
+        ("hwndCapture", wintypes.HWND),
+        ("hwndMenuOwner", wintypes.HWND),
+        ("hwndMoveSize", wintypes.HWND),
+        ("hwndCaret", wintypes.HWND),
+        ("rcCaret", RECT),
+    ]
+
+
 def is_foreground_fullscreen() -> bool:
     """
     Detects if the active foreground window is in exclusive fullscreen mode
@@ -113,8 +127,6 @@ def is_foreground_fullscreen() -> bool:
     if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
         return False
 
-    # Check against the monitor containing the window
-    # MONITOR_DEFAULTTONEAREST = 2
     h_monitor = user32.MonitorFromWindow(hwnd, 2)
     if not h_monitor:
         return False
@@ -125,7 +137,6 @@ def is_foreground_fullscreen() -> bool:
         return False
 
     mon = mi.rcMonitor
-    # If the window rect matches or exceeds the physical monitor rect and has no titlebar border
     is_fullscreen = (
         rect.left <= mon.left and
         rect.top <= mon.top and
@@ -136,15 +147,93 @@ def is_foreground_fullscreen() -> bool:
     if not is_fullscreen:
         return False
 
-    # Double check window style: WS_POPUP (0x80000000) or WS_CHILD (0x40000000) vs WS_THICKFRAME
-    # GWL_STYLE = -16
     style = user32.GetWindowLongW(hwnd, -16)
-    # If it has standard caption (WS_CAPTION = 0x00C00000), it's probably maximized rather than game fullscreen
     WS_CAPTION = 0x00C00000
     if (style & WS_CAPTION) == WS_CAPTION:
         return False
 
     return True
+
+
+def is_target_window_readonly() -> bool:
+    """
+    Detects if the foreground window or focused control is read-only (non-editable).
+    Uses Win32 GUI Thread Info caret inspection and window class heuristics.
+    Used to automatically fall back to drawer presentation instead of broken in-place pasting.
+    """
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd:
+        return True
+
+    # 1. Inspect Caret visibility across thread
+    gui_info = GUITHREADINFO()
+    gui_info.cbSize = ctypes.sizeof(GUITHREADINFO)
+    tid = user32.GetWindowThreadProcessId(hwnd, None)
+    if user32.GetGUIThreadInfo(tid, ctypes.byref(gui_info)):
+        # If there is an active blinking caret, it's definitely editable
+        if gui_info.hwndCaret and gui_info.hwndCaret != 0:
+            return False
+
+    # 2. Check window class name heuristics
+    class_buf = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, class_buf, 256)
+    cls_name = class_buf.value.lower()
+
+    # Known code editors that might not expose classic Win32 carets via GUIThreadInfo
+    editable_classes = ["vscode", "sunawtframe", "sublime", "notepad", "scintilla"]
+    if any(ec in cls_name for ec in editable_classes):
+        return False
+
+    # Standard browsers with page focus (non-input fields) are predominantly read-only
+    browser_classes = ["chrome_widgetwin", "mozillawindowclass", "edge"]
+    if any(bc in cls_name for bc in browser_classes):
+        return True
+
+    # 3. Check standard Win32 Edit control style: ES_READONLY = 0x0800
+    style = user32.GetWindowLongW(hwnd, -16)
+    ES_READONLY = 0x0800
+    if (style & ES_READONLY) == ES_READONLY:
+        return True
+
+    return False
+
+
+def is_foreground_elevated() -> bool:
+    """
+    Checks if the active foreground process has elevated Administrator privileges
+    which may block UIPI simulated keystrokes from standard user processes.
+    """
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd:
+        return False
+
+    pid = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    if pid.value == 0:
+        return False
+
+    h_process = kernel32.OpenProcess(0x1000, False, pid.value)
+    if not h_process:
+        return True  # If OpenProcess fails with access denied, it's almost certainly elevated
+
+    h_token = wintypes.HANDLE()
+    # TOKEN_QUERY = 0x0008
+    TOKEN_QUERY = 0x0008
+    advapi32 = ctypes.windll.advapi32
+    if advapi32.OpenProcessToken(h_process, TOKEN_QUERY, ctypes.byref(h_token)):
+        try:
+            elevation = wintypes.DWORD()
+            ret_len = wintypes.DWORD()
+            # TokenElevation = 20
+            if advapi32.GetTokenInformation(h_token, 20, ctypes.byref(elevation), ctypes.sizeof(elevation), ctypes.byref(ret_len)):
+                return bool(elevation.value != 0)
+        finally:
+            kernel32.CloseHandle(h_token)
+            kernel32.CloseHandle(h_process)
+    else:
+        kernel32.CloseHandle(h_process)
+
+    return False
 
 
 def get_foreground_process_info() -> Tuple[str, str, str]:

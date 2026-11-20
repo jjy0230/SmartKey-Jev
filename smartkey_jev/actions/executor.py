@@ -16,6 +16,7 @@ from typing import Dict, Any, Callable, Optional, Tuple
 from ..core.models import MacroAction, SelectionContext, MacroDeliveryMode
 from ..core.config import DeliveryConfig
 from ..capture.text_extractor import _write_clipboard_unicode
+from ..capture.win32_context import is_target_window_readonly, is_foreground_elevated
 
 
 user32 = ctypes.windll.user32
@@ -111,10 +112,33 @@ class ActionExecutor:
         else:
             replacement_text = raw_text
 
-        # Inject into clipboard and simulate Ctrl+V
+        # Inject into clipboard first
         if replacement_text:
             _write_clipboard_unicode(replacement_text, exclude_from_history=True)
-            # Sleep briefly to ensure the foreground window regains active keyboard focus
+
+            # Check if foreground window is read-only (e.g. browser page, view-only doc)
+            # or elevated with Admin permissions that block synthetic keystrokes via UIPI
+            readonly = is_target_window_readonly()
+            elevated = is_foreground_elevated()
+
+            if readonly or elevated:
+                # Graceful Adaptive Fallback: slide out drawer instead of broken paste
+                reason_tip = "目标窗口只读，已自动复制到剪贴板" if readonly else "目标为管理员特权窗口，已自动复制"
+                drawer_content = (
+                    f"### 📋 {action.title} 预览 ({reason_tip})\n\n"
+                    f"```\n{replacement_text}\n```\n\n"
+                    f"*提示：内容已置入系统剪贴板，如需在当前程序应用，请直接按 `Ctrl+V` 粘贴。*"
+                )
+                if self.drawer_callback:
+                    self.drawer_callback(f"{action.icon} {action.title}", action.icon, drawer_content)
+                return {
+                    "status": "success",
+                    "mode": "fallback_to_drawer",
+                    "reason": reason_tip,
+                    "preview": replacement_text[:60]
+                }
+
+            # If writable, proceed with in-place simulated Ctrl+V
             time.sleep(self.config.in_place_replace_delay_ms / 1000.0)
             _send_ctrl_v()
             return {"status": "success", "mode": "in_place_replace", "preview": replacement_text[:60]}

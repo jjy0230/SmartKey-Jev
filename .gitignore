@@ -31,3 +31,8 @@ ENV/
 *.swo
 
 *.log
+
+# Training data and weights
+data/
+models/
+target/
